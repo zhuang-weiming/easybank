@@ -1,0 +1,295 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.easybank.repository.AccountRepository">
+  <resultMap id="BaseResultMap" type="com.example.easybank.domain.Account">
+    <id column="id" jdbcType="BIGINT" property="id" />
+    <result column="account_number" jdbcType="VARCHAR" property="accountNumber" />
+    <result column="balance" jdbcType="NUMERIC" property="balance" />
+    <result column="currency" jdbcType="VARCHAR" property="currency" />
+    <result column="account_type" jdbcType="VARCHAR" property="accountType" />
+    <result column="status" jdbcType="VARCHAR" property="status" />
+    <result column="version" jdbcType="INTEGER" property="version" />
+    <result column="created_at" jdbcType="TIMESTAMP" property="createdAt" />
+    <result column="updated_at" jdbcType="TIMESTAMP" property="updatedAt" />
+  </resultMap>
+  <sql id="Example_Where_Clause">
+    <where>
+      <foreach collection="oredCriteria" item="criteria" separator="or">
+        <if test="criteria.valid">
+          <trim prefix="(" prefixOverrides="and" suffix=")">
+            <foreach collection="criteria.criteria" item="criterion">
+              <choose>
+                <when test="criterion.noValue">
+                  and ${criterion.condition}
+                </when>
+                <when test="criterion.singleValue">
+                  and ${criterion.condition} #{criterion.value}
+                </when>
+                <when test="criterion.betweenValue">
+                  and ${criterion.condition} #{criterion.value} and #{criterion.secondValue}
+                </when>
+                <when test="criterion.listValue">
+                  and ${criterion.condition}
+                  <foreach close=")" collection="criterion.value" item="listItem" open="(" separator=",">
+                    #{listItem}
+                  </foreach>
+                </when>
+              </choose>
+            </foreach>
+          </trim>
+        </if>
+      </foreach>
+    </where>
+  </sql>
+  <sql id="Update_By_Example_Where_Clause">
+    <where>
+      <foreach collection="example.oredCriteria" item="criteria" separator="or">
+        <if test="criteria.valid">
+          <trim prefix="(" prefixOverrides="and" suffix=")">
+            <foreach collection="criteria.criteria" item="criterion">
+              <choose>
+                <when test="criterion.noValue">
+                  and ${criterion.condition}
+                </when>
+                <when test="criterion.singleValue">
+                  and ${criterion.condition} #{criterion.value}
+                </when>
+                <when test="criterion.betweenValue">
+                  and ${criterion.condition} #{criterion.value} and #{criterion.secondValue}
+                </when>
+                <when test="criterion.listValue">
+                  and ${criterion.condition}
+                  <foreach close=")" collection="criterion.value" item="listItem" open="(" separator=",">
+                    #{listItem}
+                  </foreach>
+                </when>
+              </choose>
+            </foreach>
+          </trim>
+        </if>
+      </foreach>
+    </where>
+  </sql>
+  <sql id="Base_Column_List">
+    id, account_number, balance, currency, account_type, status, version, created_at, 
+    updated_at
+  </sql>
+  <select id="selectByExample" parameterType="com.example.easybank.domain.AccountExample" resultMap="BaseResultMap">
+    select
+    <if test="distinct">
+      distinct
+    </if>
+    <include refid="Base_Column_List" />
+    from accounts
+    <if test="_parameter != null">
+      <include refid="Example_Where_Clause" />
+    </if>
+    <if test="orderByClause != null">
+      order by ${orderByClause}
+    </if>
+  </select>
+  <select id="selectByPrimaryKey" parameterType="java.lang.Long" resultMap="BaseResultMap">
+    select 
+    <include refid="Base_Column_List" />
+    from accounts
+    where id = #{id,jdbcType=BIGINT}
+  </select>
+  <delete id="deleteByPrimaryKey" parameterType="java.lang.Long">
+    delete from accounts
+    where id = #{id,jdbcType=BIGINT}
+  </delete>
+  <delete id="deleteByExample" parameterType="com.example.easybank.domain.AccountExample">
+    delete from accounts
+    <if test="_parameter != null">
+      <include refid="Example_Where_Clause" />
+    </if>
+  </delete>
+  <insert id="insert" keyColumn="id" keyProperty="id" parameterType="com.example.easybank.domain.Account" useGeneratedKeys="true">
+    insert into accounts (account_number, balance, currency, 
+      account_type, status, version, 
+      created_at, updated_at)
+    values (#{accountNumber,jdbcType=VARCHAR}, #{balance,jdbcType=NUMERIC}, #{currency,jdbcType=VARCHAR}, 
+      #{accountType,jdbcType=VARCHAR}, #{status,jdbcType=VARCHAR}, #{version,jdbcType=INTEGER}, 
+      #{createdAt,jdbcType=TIMESTAMP}, #{updatedAt,jdbcType=TIMESTAMP})
+  </insert>
+  <insert id="insertSelective" keyColumn="id" keyProperty="id" parameterType="com.example.easybank.domain.Account" useGeneratedKeys="true">
+    insert into accounts
+    <trim prefix="(" suffix=")" suffixOverrides=",">
+      <if test="accountNumber != null">
+        account_number,
+      </if>
+      <if test="balance != null">
+        balance,
+      </if>
+      <if test="currency != null">
+        currency,
+      </if>
+      <if test="accountType != null">
+        account_type,
+      </if>
+      <if test="status != null">
+        status,
+      </if>
+      <if test="version != null">
+        version,
+      </if>
+      <if test="createdAt != null">
+        created_at,
+      </if>
+      <if test="updatedAt != null">
+        updated_at,
+      </if>
+    </trim>
+    <trim prefix="values (" suffix=")" suffixOverrides=",">
+      <if test="accountNumber != null">
+        #{accountNumber,jdbcType=VARCHAR},
+      </if>
+      <if test="balance != null">
+        #{balance,jdbcType=NUMERIC},
+      </if>
+      <if test="currency != null">
+        #{currency,jdbcType=VARCHAR},
+      </if>
+      <if test="accountType != null">
+        #{accountType,jdbcType=VARCHAR},
+      </if>
+      <if test="status != null">
+        #{status,jdbcType=VARCHAR},
+      </if>
+      <if test="version != null">
+        #{version,jdbcType=INTEGER},
+      </if>
+      <if test="createdAt != null">
+        #{createdAt,jdbcType=TIMESTAMP},
+      </if>
+      <if test="updatedAt != null">
+        #{updatedAt,jdbcType=TIMESTAMP},
+      </if>
+    </trim>
+  </insert>
+  <select id="countByExample" parameterType="com.example.easybank.domain.AccountExample" resultType="java.lang.Long">
+    select count(*) from accounts
+    <if test="_parameter != null">
+      <include refid="Example_Where_Clause" />
+    </if>
+  </select>
+  <update id="updateByExampleSelective" parameterType="map">
+    update accounts
+    <set>
+      <if test="row.id != null">
+        id = #{row.id,jdbcType=BIGINT},
+      </if>
+      <if test="row.accountNumber != null">
+        account_number = #{row.accountNumber,jdbcType=VARCHAR},
+      </if>
+      <if test="row.balance != null">
+        balance = #{row.balance,jdbcType=NUMERIC},
+      </if>
+      <if test="row.currency != null">
+        currency = #{row.currency,jdbcType=VARCHAR},
+      </if>
+      <if test="row.accountType != null">
+        account_type = #{row.accountType,jdbcType=VARCHAR},
+      </if>
+      <if test="row.status != null">
+        status = #{row.status,jdbcType=VARCHAR},
+      </if>
+      <if test="row.version != null">
+        version = #{row.version,jdbcType=INTEGER},
+      </if>
+      <if test="row.createdAt != null">
+        created_at = #{row.createdAt,jdbcType=TIMESTAMP},
+      </if>
+      <if test="row.updatedAt != null">
+        updated_at = #{row.updatedAt,jdbcType=TIMESTAMP},
+      </if>
+    </set>
+    <if test="example != null">
+      <include refid="Update_By_Example_Where_Clause" />
+    </if>
+  </update>
+  <update id="updateByExample" parameterType="map">
+    update accounts
+    set id = #{row.id,jdbcType=BIGINT},
+      account_number = #{row.accountNumber,jdbcType=VARCHAR},
+      balance = #{row.balance,jdbcType=NUMERIC},
+      currency = #{row.currency,jdbcType=VARCHAR},
+      account_type = #{row.accountType,jdbcType=VARCHAR},
+      status = #{row.status,jdbcType=VARCHAR},
+      version = #{row.version,jdbcType=INTEGER},
+      created_at = #{row.createdAt,jdbcType=TIMESTAMP},
+      updated_at = #{row.updatedAt,jdbcType=TIMESTAMP}
+    <if test="example != null">
+      <include refid="Update_By_Example_Where_Clause" />
+    </if>
+  </update>
+  <update id="updateByPrimaryKeySelective" parameterType="com.example.easybank.domain.Account">
+    update accounts
+    <set>
+      <if test="accountNumber != null">
+        account_number = #{accountNumber,jdbcType=VARCHAR},
+      </if>
+      <if test="balance != null">
+        balance = #{balance,jdbcType=NUMERIC},
+      </if>
+      <if test="currency != null">
+        currency = #{currency,jdbcType=VARCHAR},
+      </if>
+      <if test="accountType != null">
+        account_type = #{accountType,jdbcType=VARCHAR},
+      </if>
+      <if test="status != null">
+        status = #{status,jdbcType=VARCHAR},
+      </if>
+      <if test="version != null">
+        version = #{version,jdbcType=INTEGER},
+      </if>
+      <if test="createdAt != null">
+        created_at = #{createdAt,jdbcType=TIMESTAMP},
+      </if>
+      <if test="updatedAt != null">
+        updated_at = #{updatedAt,jdbcType=TIMESTAMP},
+      </if>
+    </set>
+    where id = #{id,jdbcType=BIGINT}
+  </update>
+  <update id="updateByPrimaryKey" parameterType="com.example.easybank.domain.Account">
+    update accounts
+    set account_number = #{accountNumber,jdbcType=VARCHAR},
+      balance = #{balance,jdbcType=NUMERIC},
+      currency = #{currency,jdbcType=VARCHAR},
+      account_type = #{accountType,jdbcType=VARCHAR},
+      status = #{status,jdbcType=VARCHAR},
+      version = #{version,jdbcType=INTEGER},
+      created_at = #{createdAt,jdbcType=TIMESTAMP},
+      updated_at = #{updatedAt,jdbcType=TIMESTAMP}
+    where id = #{id,jdbcType=BIGINT}
+  </update>
+  <resultMap id="accountResultMap" type="com.example.easybank.domain.Account">
+    <id column="account_number" property="accountNumber" />
+    <result column="account_holder" property="accountHolder" />
+    <result column="balance" property="balance" />
+    <result column="version" property="version" />
+  </resultMap>
+
+  <select id="findByAccountNumber" resultMap="accountResultMap">
+    SELECT * FROM accounts WHERE account_number = #{accountNumber}
+  </select>
+
+  <select id="findByAccountNumberWithLock" resultMap="accountResultMap">
+    SELECT * FROM accounts WHERE account_number = #{accountNumber} FOR UPDATE
+  </select>
+
+  <insert id="save" keyProperty="id" parameterType="com.example.easybank.domain.Account" useGeneratedKeys="true">
+    INSERT INTO accounts (account_number, account_holder, balance, version, account_type, currency)
+    VALUES (#{accountNumber}, #{accountHolder}, #{balance}, #{version}, #{accountType}, #{currency})
+    ON CONFLICT (account_number)
+    DO UPDATE SET
+        account_holder = #{accountHolder},
+        balance = #{balance},
+        version = #{version} + 1,
+        account_type = #{accountType},
+        currency = #{currency}
+    RETURNING *
+  </insert>
+</mapper>
