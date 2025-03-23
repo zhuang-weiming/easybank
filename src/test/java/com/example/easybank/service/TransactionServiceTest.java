@@ -204,4 +204,140 @@ class TransactionServiceTest {
         verify(accountRepository).findById(10L);
         verify(accountRepository).findById(20L);
     }
+
+    @Test
+    void processTransaction_PopulatesNullFields() {
+        // Arrange
+        Account sourceAccount = new Account();
+        sourceAccount.setId(1L);
+        sourceAccount.setAccountNumber("123");
+        sourceAccount.setAccountHolder(null); // Null account holder
+        sourceAccount.setAccountType(null); // Null account type
+        sourceAccount.setBalance(new BigDecimal("1000"));
+        sourceAccount.setCurrency("USD");
+
+        Account destinationAccount = new Account();
+        destinationAccount.setId(2L);
+        destinationAccount.setAccountNumber("456");
+        destinationAccount.setAccountHolder(null); // Null account holder
+        destinationAccount.setAccountType(null); // Null account type
+        destinationAccount.setBalance(new BigDecimal("500"));
+        destinationAccount.setCurrency("USD");
+
+        when(accountRepository.findByAccountNumber("123")).thenReturn(Optional.of(sourceAccount));
+        when(accountRepository.findByAccountNumber("456")).thenReturn(Optional.of(destinationAccount));
+        when(accountRepository.update(any(Account.class))).thenReturn(1);
+        when(transactionRepository.save(any(Transaction.class))).thenReturn(1);
+
+        // Act
+        Transaction result = transactionService.processTransaction("123", "456", new BigDecimal("100"));
+
+        // Assert
+        assertEquals("Account Holder 123", sourceAccount.getAccountHolder());
+        assertEquals("Account Holder 456", destinationAccount.getAccountHolder());
+        assertEquals("CHECKING", sourceAccount.getAccountType());
+        assertEquals("CHECKING", destinationAccount.getAccountType());
+        assertEquals(new BigDecimal("900"), sourceAccount.getBalance());
+        assertEquals(new BigDecimal("600"), destinationAccount.getBalance());
+        verify(accountRepository, times(1)).update(sourceAccount);
+        verify(accountRepository, times(1)).update(destinationAccount);
+    }
+
+    @Test
+    void getAccountTransactions_HandlesNonExistentAccounts() {
+        // Arrange
+        String accountNumber = "123";
+        
+        // Create test transaction with IDs but no account objects
+        Transaction transaction = new Transaction();
+        transaction.setId(1L);
+        transaction.setSourceAccountId(10L);
+        transaction.setDestinationAccountId(20L);
+        transaction.setAmount(new BigDecimal("100"));
+        transaction.setCurrency("USD");
+        transaction.setTransactionType("TRANSFER");
+        transaction.setStatus(TransactionStatus.COMPLETED);
+        
+        // Mock repository responses
+        when(transactionRepository.findBySourceAccountAccountNumberOrDestinationAccountAccountNumber(accountNumber))
+            .thenReturn(List.of(transaction));
+        when(accountRepository.findById(10L)).thenReturn(Optional.empty()); // Source account not found
+        when(accountRepository.findById(20L)).thenReturn(Optional.empty()); // Destination account not found
+        
+        // Act
+        List<Transaction> result = transactionService.getAccountTransactions(accountNumber);
+        
+        // Assert
+        assertEquals(1, result.size());
+        Transaction resultTransaction = result.get(0);
+        
+        // Verify accounts were not loaded (since they don't exist)
+        assertNull(resultTransaction.getSourceAccount());
+        assertNull(resultTransaction.getDestinationAccount());
+        
+        // Verify repository methods were called
+        verify(transactionRepository).findBySourceAccountAccountNumberOrDestinationAccountAccountNumber(accountNumber);
+        verify(accountRepository).findById(10L);
+        verify(accountRepository).findById(20L);
+    }
+
+    @Test
+    void getAccountTransactions_HandlesEmptyTransactionsList() {
+        // Arrange
+        String accountNumber = "123";
+        
+        // Mock repository responses
+        when(transactionRepository.findBySourceAccountAccountNumberOrDestinationAccountAccountNumber(accountNumber))
+            .thenReturn(List.of());
+        
+        // Act
+        List<Transaction> result = transactionService.getAccountTransactions(accountNumber);
+        
+        // Assert
+        assertTrue(result.isEmpty());
+        
+        // Verify repository method was called
+        verify(transactionRepository).findBySourceAccountAccountNumberOrDestinationAccountAccountNumber(accountNumber);
+        // Verify no account lookups were performed
+        verify(accountRepository, never()).findById(any());
+    }
+
+    @Test
+    void getAccount_ReturnsAccount() {
+        // Arrange
+        String accountNumber = "123";
+        Account account = new Account();
+        account.setId(1L);
+        account.setAccountNumber(accountNumber);
+        account.setAccountHolder("John Doe");
+        
+        when(accountRepository.findByAccountNumber(accountNumber)).thenReturn(Optional.of(account));
+        
+        // Act
+        Account result = transactionService.getAccount(accountNumber);
+        
+        // Assert
+        assertNotNull(result);
+        assertEquals(accountNumber, result.getAccountNumber());
+        assertEquals("John Doe", result.getAccountHolder());
+        
+        // Verify repository method was called
+        verify(accountRepository).findByAccountNumber(accountNumber);
+    }
+    
+    @Test
+    void getAccount_ThrowsExceptionWhenAccountNotFound() {
+        // Arrange
+        String accountNumber = "nonexistent";
+        when(accountRepository.findByAccountNumber(accountNumber)).thenReturn(Optional.empty());
+        
+        // Act & Assert
+        Exception exception = assertThrows(RuntimeException.class, 
+                                         () -> transactionService.getAccount(accountNumber));
+        
+        assertTrue(exception.getMessage().contains("Account not found"));
+        
+        // Verify repository method was called
+        verify(accountRepository).findByAccountNumber(accountNumber);
+    }
 }
