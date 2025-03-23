@@ -98,6 +98,20 @@
         </dependency>
     </dependencies>
 
+    <repositories>
+        <repository>
+            <id>openclover-repo</id>
+            <url>https://repo.openclover.org/repository</url>
+        </repository>
+    </repositories>
+    
+    <pluginRepositories>
+        <pluginRepository>
+            <id>openclover-plugin-repo</id>
+            <url>https://repo.openclover.org/repository</url>
+        </pluginRepository>
+    </pluginRepositories>
+
     <build>
         <resources>
             <resource>
@@ -158,20 +172,21 @@
                 </dependencies>
             </plugin>
             <plugin>
-                <groupId>org.jacoco</groupId>
-                <artifactId>jacoco-maven-plugin</artifactId>
-                <version>0.8.7</version>
+                <groupId>org.openclover</groupId>
+                <artifactId>clover-maven-plugin</artifactId>
+                <version>4.4.1</version>
+                <configuration>
+                    <targetPercentage>80%</targetPercentage>
+                    <generateHtml>true</generateHtml>
+                    <generatePdf>false</generatePdf>
+                </configuration>
                 <executions>
                     <execution>
-                        <goals>
-                            <goal>prepare-agent</goal>
-                        </goals>
-                    </execution>
-                    <execution>
-                        <id>report</id>
+                        <id>clover</id>
                         <phase>test</phase>
                         <goals>
-                            <goal>report</goal>
+                            <goal>setup</goal>
+                            <goal>clover</goal>
                         </goals>
                     </execution>
                 </executions>
