@@ -22,6 +22,7 @@ CREATE TABLE IF NOT EXISTS public.transactions (
     transaction_type VARCHAR(20) NOT NULL,
     status VARCHAR(20) NOT NULL DEFAULT 'PENDING',
     description TEXT,
+    version INTEGER NOT NULL DEFAULT 0,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT chk_different_accounts CHECK (source_account_id != destination_account_id),
@@ -34,22 +35,3 @@ CREATE INDEX IF NOT EXISTS idx_accounts_status ON public.accounts(status);
 CREATE INDEX IF NOT EXISTS idx_transactions_source_account ON public.transactions(source_account_id);
 CREATE INDEX IF NOT EXISTS idx_transactions_destination_account ON public.transactions(destination_account_id);
 CREATE INDEX IF NOT EXISTS idx_transactions_created_at ON public.transactions(created_at);
-
--- Create trigger to update updated_at timestamp
-CREATE OR REPLACE FUNCTION update_updated_at_column()
-RETURNS TRIGGER AS $$
-BEGIN
-    NEW.updated_at = CURRENT_TIMESTAMP;
-    RETURN NEW;
-END;
-$$ language 'plpgsql';
-
-CREATE TRIGGER update_accounts_updated_at
-    BEFORE UPDATE ON public.accounts
-    FOR EACH ROW
-    EXECUTE FUNCTION update_updated_at_column();
-
-CREATE TRIGGER update_transactions_updated_at
-    BEFORE UPDATE ON public.transactions
-    FOR EACH ROW
-    EXECUTE FUNCTION update_updated_at_column();

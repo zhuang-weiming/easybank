@@ -12,13 +12,16 @@ CREATE TABLE IF NOT EXISTS account (
 
 CREATE TABLE IF NOT EXISTS transaction (
     id SERIAL PRIMARY KEY,
-    transaction_id VARCHAR(255) NOT NULL UNIQUE,
-    source_account_number VARCHAR(255) NOT NULL,
-    destination_account_number VARCHAR(255) NOT NULL,
+    source_account_id BIGINT REFERENCES account(id),
+    destination_account_id BIGINT REFERENCES account(id),
     amount DECIMAL(19, 2) NOT NULL,
-    timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    status VARCHAR(50) NOT NULL,
-    retry_count INT NOT NULL DEFAULT 0,
-    FOREIGN KEY (source_account_number) REFERENCES account(account_number),
-    FOREIGN KEY (destination_account_number) REFERENCES account(account_number)
+    currency VARCHAR(3) NOT NULL,
+    transaction_type VARCHAR(20) NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'PENDING',
+    description TEXT,
+    version INTEGER NOT NULL DEFAULT 0,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT chk_different_accounts CHECK (source_account_id != destination_account_id),
+    CONSTRAINT chk_positive_amount CHECK (amount > 0)
 );

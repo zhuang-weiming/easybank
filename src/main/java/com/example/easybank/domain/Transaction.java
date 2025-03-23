@@ -1,33 +1,56 @@
 package com.example.easybank.domain;
 
+import javax.persistence.*;
 import java.io.Serializable;
 import java.math.BigDecimal;
-import java.util.Date;
 
-public class Transaction implements Serializable {
+@Entity
+@Table(name = "transactions")
+public class Transaction extends BaseEntity implements Serializable {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "source_account_id")
     private Account sourceAccount;
     
+    @Column(name = "source_account_id", insertable = false, updatable = false)
     private Long sourceAccountId;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "destination_account_id")
     private Account destinationAccount;
     
+    @Column(name = "destination_account_id", insertable = false, updatable = false)
     private Long destinationAccountId;
 
+    @Column(nullable = false)
     private BigDecimal amount;
 
+    @Column(nullable = false)
     private String currency;
 
+    @Column(name = "transaction_type", nullable = false)
     private String transactionType;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
     private TransactionStatus status;
 
     private String description;
 
-    private Date createdAt;
+    @Transient
+    private String transactionId;
 
-    private Date updatedAt;
+    @Transient
+    private String sourceAccountNumber;
+
+    @Transient
+    private String destinationAccountNumber;
+
+    @Version
+    private Integer version;
 
     private static final long serialVersionUID = 1L;
 
@@ -95,22 +118,6 @@ public class Transaction implements Serializable {
         this.description = description == null ? null : description.trim();
     }
 
-    public Date getCreatedAt() {
-        return createdAt;
-    }
-
-    public void setCreatedAt(Date createdAt) {
-        this.createdAt = createdAt;
-    }
-
-    public Date getUpdatedAt() {
-        return updatedAt;
-    }
-
-    public void setUpdatedAt(Date updatedAt) {
-        this.updatedAt = updatedAt;
-    }
-
     public Long getSourceAccountId() {
         return sourceAccountId;
     }
@@ -125,6 +132,38 @@ public class Transaction implements Serializable {
 
     public void setDestinationAccountId(Long destinationAccountId) {
         this.destinationAccountId = destinationAccountId;
+    }
+
+    public String getTransactionId() {
+        return transactionId;
+    }
+
+    public void setTransactionId(String transactionId) {
+        this.transactionId = transactionId;
+    }
+
+    public String getSourceAccountNumber() {
+        return sourceAccountNumber;
+    }
+
+    public void setSourceAccountNumber(String sourceAccountNumber) {
+        this.sourceAccountNumber = sourceAccountNumber;
+    }
+
+    public String getDestinationAccountNumber() {
+        return destinationAccountNumber;
+    }
+
+    public void setDestinationAccountNumber(String destinationAccountNumber) {
+        this.destinationAccountNumber = destinationAccountNumber;
+    }
+
+    public Integer getVersion() {
+        return version;
+    }
+
+    public void setVersion(Integer version) {
+        this.version = version;
     }
 
     @Override
@@ -150,7 +189,11 @@ public class Transaction implements Serializable {
             && (this.getStatus() == null ? other.getStatus() == null : this.getStatus().equals(other.getStatus()))
             && (this.getDescription() == null ? other.getDescription() == null : this.getDescription().equals(other.getDescription()))
             && (this.getCreatedAt() == null ? other.getCreatedAt() == null : this.getCreatedAt().equals(other.getCreatedAt()))
-            && (this.getUpdatedAt() == null ? other.getUpdatedAt() == null : this.getUpdatedAt().equals(other.getUpdatedAt()));
+            && (this.getUpdatedAt() == null ? other.getUpdatedAt() == null : this.getUpdatedAt().equals(other.getUpdatedAt()))
+            && (this.getTransactionId() == null ? other.getTransactionId() == null : this.getTransactionId().equals(other.getTransactionId()))
+            && (this.getSourceAccountNumber() == null ? other.getSourceAccountNumber() == null : this.getSourceAccountNumber().equals(other.getSourceAccountNumber()))
+            && (this.getDestinationAccountNumber() == null ? other.getDestinationAccountNumber() == null : this.getDestinationAccountNumber().equals(other.getDestinationAccountNumber()))
+            && (this.getVersion() == null ? other.getVersion() == null : this.getVersion().equals(other.getVersion()));
     }
 
     @Override
@@ -169,6 +212,10 @@ public class Transaction implements Serializable {
         result = prime * result + ((getDescription() == null) ? 0 : getDescription().hashCode());
         result = prime * result + ((getCreatedAt() == null) ? 0 : getCreatedAt().hashCode());
         result = prime * result + ((getUpdatedAt() == null) ? 0 : getUpdatedAt().hashCode());
+        result = prime * result + ((getTransactionId() == null) ? 0 : getTransactionId().hashCode());
+        result = prime * result + ((getSourceAccountNumber() == null) ? 0 : getSourceAccountNumber().hashCode());
+        result = prime * result + ((getDestinationAccountNumber() == null) ? 0 : getDestinationAccountNumber().hashCode());
+        result = prime * result + ((getVersion() == null) ? 0 : getVersion().hashCode());
         return result;
     }
 
@@ -179,17 +226,19 @@ public class Transaction implements Serializable {
         sb.append(" [");
         sb.append("Hash = ").append(hashCode());
         sb.append(", id=").append(id);
-        sb.append(", sourceAccount=").append(sourceAccount);
         sb.append(", sourceAccountId=").append(sourceAccountId);
-        sb.append(", destinationAccount=").append(destinationAccount);
         sb.append(", destinationAccountId=").append(destinationAccountId);
         sb.append(", amount=").append(amount);
         sb.append(", currency=").append(currency);
         sb.append(", transactionType=").append(transactionType);
         sb.append(", status=").append(status);
         sb.append(", description=").append(description);
-        sb.append(", createdAt=").append(createdAt);
-        sb.append(", updatedAt=").append(updatedAt);
+        sb.append(", createdAt=").append(getCreatedAt());
+        sb.append(", updatedAt=").append(getUpdatedAt());
+        sb.append(", transactionId=").append(transactionId);
+        sb.append(", sourceAccountNumber=").append(sourceAccountNumber);
+        sb.append(", destinationAccountNumber=").append(destinationAccountNumber);
+        sb.append(", version=").append(version);
         sb.append(", serialVersionUID=").append(serialVersionUID);
         sb.append("]");
         return sb.toString();

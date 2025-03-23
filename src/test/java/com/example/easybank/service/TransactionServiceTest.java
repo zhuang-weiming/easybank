@@ -16,6 +16,7 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 class TransactionServiceTest {
@@ -27,11 +28,17 @@ class TransactionServiceTest {
 
     @Mock
     private TransactionRepository transactionRepository;
+    
+    @Mock
+    private RateLimiterService rateLimiterService;
 
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
-        transactionService = new TransactionService(accountRepository, transactionRepository);
+        transactionService = new TransactionService(accountRepository, transactionRepository, rateLimiterService);
+        
+        // By default, allow rate limits for all tests
+        doNothing().when(rateLimiterService).checkTransactionRateLimit(anyString());
     }
 
     @Test
@@ -63,6 +70,7 @@ class TransactionServiceTest {
         assertEquals(new BigDecimal("600"), destinationAccount.getBalance());
         verify(accountRepository, times(1)).update(sourceAccount);
         verify(accountRepository, times(1)).update(destinationAccount);
+        verify(rateLimiterService, times(1)).checkTransactionRateLimit("123");
     }
 
     @Test

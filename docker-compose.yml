@@ -1,16 +1,42 @@
-version: '3.8'
-
 services:
-  postgres:
-    image: postgres:13
+  app:
+    build: .
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     environment:
-      POSTGRES_DB: easybank
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/easybank
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=postgres
+      - SPRING_REDIS_HOST=redis
+      - SPRING_REDIS_PORT=6379
+    networks:
+      - easybank-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  postgres:
+    image: postgres:14
     ports:
       - "5432:5432"
+    environment:
+      - POSTGRES_DB=easybank
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres-data:/var/lib/postgresql/data
+      - ./src/main/resources/schema.sql:/docker-entrypoint-initdb.d/1-schema.sql:ro
+      - ./src/main/resources/data.sql:/docker-entrypoint-initdb.d/2-data.sql:ro
+    networks:
+      - easybank-network
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 10s
@@ -18,11 +44,13 @@ services:
       retries: 5
 
   redis:
-    image: redis:6
+    image: redis:7.2
     ports:
       - "6379:6379"
     volumes:
-      - redis_data:/data
+      - redis-data:/data
+    networks:
+      - easybank-network
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -30,5 +58,9 @@ services:
       retries: 5
 
 volumes:
-  postgres_data:
-  redis_data:
+  postgres-data:
+  redis-data:
+
+networks:
+  easybank-network:
+    driver: bridge

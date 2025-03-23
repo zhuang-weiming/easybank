@@ -1,0 +1,26 @@
+FROM eclipse-temurin:23-jdk-jammy
+
+WORKDIR /app
+
+# Copy the JAR file
+COPY target/*.jar app.jar
+
+# Copy the wait-for-it script
+COPY wait-for-it.sh /wait-for-it.sh
+RUN chmod +x /wait-for-it.sh && \
+    apt-get update && \
+    apt-get install -y netcat curl && \
+    rm -rf /var/lib/apt/lists/*
+
+# Environment variables with defaults
+ENV SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/easybank
+ENV SPRING_DATASOURCE_USERNAME=postgres
+ENV SPRING_DATASOURCE_PASSWORD=postgres
+ENV SPRING_REDIS_HOST=redis
+ENV SPRING_REDIS_PORT=6379
+ENV SERVER_PORT=8080
+
+EXPOSE 8080
+
+# Wait for PostgreSQL and Redis to be ready before starting the application
+ENTRYPOINT ["/bin/sh", "-c", "/wait-for-it.sh postgres:5432 -t 60 -- /wait-for-it.sh redis:6379 -t 60 -- java -jar app.jar"] 

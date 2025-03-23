@@ -23,10 +23,14 @@ import java.util.List;
 public class TransactionService {
     private final AccountRepository accountRepository;
     private final TransactionRepository transactionRepository;
+    private final RateLimiterService rateLimiterService;
 
-    public TransactionService(AccountRepository accountRepository, TransactionRepository transactionRepository) {
+    public TransactionService(AccountRepository accountRepository, 
+                              TransactionRepository transactionRepository,
+                              RateLimiterService rateLimiterService) {
         this.accountRepository = accountRepository;
         this.transactionRepository = transactionRepository;
+        this.rateLimiterService = rateLimiterService;
     }
     
     @Cacheable(value = "accounts", key = "#accountNumber")
@@ -40,6 +44,9 @@ public class TransactionService {
     @CacheEvict(value = "accounts", allEntries = true)
     public Transaction processTransaction(String sourceAccountNumber, String destinationAccountNumber, BigDecimal amount) {
         log.info("Processing transaction from {} to {} for amount {}", sourceAccountNumber, destinationAccountNumber, amount);
+        
+        // Check for rate limiting first - this will throw TooManyRequestsException if the limit is exceeded
+        rateLimiterService.checkTransactionRateLimit(sourceAccountNumber);
         
         Account sourceAccount = accountRepository.findByAccountNumber(sourceAccountNumber)
                 .orElseThrow(() -> new IllegalArgumentException("Source account not found: " + sourceAccountNumber));

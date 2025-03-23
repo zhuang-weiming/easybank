@@ -1,29 +1,36 @@
 package com.example.easybank.domain;
 
+import javax.persistence.*;
 import java.io.Serializable;
 import java.math.BigDecimal;
-import java.util.Date;
 
-public class Account implements Serializable {
+@Entity
+@Table(name = "accounts")
+public class Account extends BaseEntity implements Serializable {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(name = "account_number", unique = true, nullable = false)
     private String accountNumber;
 
+    @Column(name = "account_holder", nullable = false)
     private String accountHolder;
 
+    @Column(nullable = false)
     private BigDecimal balance;
 
+    @Column(nullable = false)
     private String currency;
 
+    @Column(name = "account_type", nullable = false)
     private String accountType;
 
+    @Column(nullable = false)
     private String status;
 
+    @Version
     private Integer version;
-
-    private Date createdAt;
-
-    private Date updatedAt;
 
     private static final long serialVersionUID = 1L;
 
@@ -91,22 +98,6 @@ public class Account implements Serializable {
         this.version = version;
     }
 
-    public Date getCreatedAt() {
-        return createdAt;
-    }
-
-    public void setCreatedAt(Date createdAt) {
-        this.createdAt = createdAt;
-    }
-
-    public Date getUpdatedAt() {
-        return updatedAt;
-    }
-
-    public void setUpdatedAt(Date updatedAt) {
-        this.updatedAt = updatedAt;
-    }
-
     @Override
     public boolean equals(Object that) {
         if (this == that) {
@@ -154,13 +145,14 @@ public class Account implements Serializable {
         sb.append("Hash = ").append(hashCode());
         sb.append(", id=").append(id);
         sb.append(", accountNumber=").append(accountNumber);
+        sb.append(", accountHolder=").append(accountHolder);
         sb.append(", balance=").append(balance);
         sb.append(", currency=").append(currency);
         sb.append(", accountType=").append(accountType);
         sb.append(", status=").append(status);
         sb.append(", version=").append(version);
-        sb.append(", createdAt=").append(createdAt);
-        sb.append(", updatedAt=").append(updatedAt);
+        sb.append(", createdAt=").append(getCreatedAt());
+        sb.append(", updatedAt=").append(getUpdatedAt());
         sb.append(", serialVersionUID=").append(serialVersionUID);
         sb.append("]");
         return sb.toString();

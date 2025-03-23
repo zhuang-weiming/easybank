@@ -1,9 +1,32 @@
 spring:
+  main:
+    allow-bean-definition-overriding: true
+  redis:
+    host: localhost
+    port: 6379
   datasource:
     url: jdbc:postgresql://localhost:5432/easybank
     username: postgres
     password: postgres
     driver-class-name: org.postgresql.Driver
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      ddl-auto: create-drop
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+  sql:
+    init:
+      mode: always
+      platform: postgresql
+
+logging:
+  level:
+    com.example.easybank: DEBUG
+    org.springframework.data.redis: DEBUG
+    org.springframework.transaction: DEBUG
 
 mybatis:
   mapper-locations: classpath:mapper/*.xml
