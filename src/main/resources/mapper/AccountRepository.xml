@@ -266,11 +266,21 @@
     where id = #{id,jdbcType=BIGINT}
   </update>
   <resultMap id="accountResultMap" type="com.example.easybank.domain.Account">
-    <id column="account_number" property="accountNumber" />
-    <result column="account_holder" property="accountHolder" />
-    <result column="balance" property="balance" />
-    <result column="version" property="version" />
+    <id column="id" jdbcType="BIGINT" property="id" />
+    <result column="account_number" jdbcType="VARCHAR" property="accountNumber" />
+    <result column="account_holder" jdbcType="VARCHAR" property="accountHolder" />
+    <result column="balance" jdbcType="NUMERIC" property="balance" />
+    <result column="currency" jdbcType="VARCHAR" property="currency" />
+    <result column="account_type" jdbcType="VARCHAR" property="accountType" />
+    <result column="status" jdbcType="VARCHAR" property="status" />
+    <result column="version" jdbcType="INTEGER" property="version" />
+    <result column="created_at" jdbcType="TIMESTAMP" property="createdAt" />
+    <result column="updated_at" jdbcType="TIMESTAMP" property="updatedAt" />
   </resultMap>
+
+  <select id="findById" resultMap="BaseResultMap">
+    SELECT * FROM accounts WHERE account_number = #{accountNumber}
+  </select>
 
   <select id="findByAccountNumber" resultMap="accountResultMap">
     SELECT * FROM accounts WHERE account_number = #{accountNumber}
