@@ -1,0 +1,40 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: db-migration
+spec:
+  backoffLimit: 5
+  template:
+    spec:
+      containers:
+      - name: flyway
+        image: flyway/flyway:9-alpine
+        command: ["flyway", "migrate"]
+        env:
+        - name: FLYWAY_URL
+          valueFrom:
+            configMapKeyRef:
+              name: easybank-config
+              key: db-url
+        - name: FLYWAY_USER
+          valueFrom:
+            secretKeyRef:
+              name: easybank-secrets
+              key: db-username
+        - name: FLYWAY_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: easybank-secrets
+              key: db-password
+        - name: FLYWAY_SCHEMAS
+          value: public
+        - name: FLYWAY_BASELINE_ON_MIGRATE
+          value: "true"
+        volumeMounts:
+        - name: sql-volume
+          mountPath: /flyway/sql
+      volumes:
+      - name: sql-volume
+        configMap:
+          name: db-migration-sql
+      restartPolicy: OnFailure 

@@ -1,0 +1,34 @@
+apiVersion: eksctl.io/v1alpha5
+kind: ClusterConfig
+
+metadata:
+  name: easybank-cluster
+  region: us-west-2
+  version: "1.27"
+
+# Managed node groups are a simpler way to run EKS nodes
+managedNodeGroups:
+  - name: easybank-workers
+    instanceType: t3.micro  # Smallest viable instance type for testing
+    desiredCapacity: 2
+    minSize: 1
+    maxSize: 3
+    volumeSize: 20  # 20 GB root volume
+    iam:
+      withAddonPolicies:
+        imageBuilder: true  # For working with ECR
+        autoScaler: true    # For cluster autoscaling
+        albIngress: true    # For AWS Load Balancer Controller
+
+# Add-ons for the EKS cluster
+addons:
+  - name: vpc-cni  # Networking
+    version: latest
+  - name: coredns  # DNS
+    version: latest
+  - name: kube-proxy # Kubernetes networking
+    version: latest
+    
+# IAM for service accounts allows pods to have AWS permissions
+iam:
+  withOIDC: true  # Enable IAM OIDC provider 

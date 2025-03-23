@@ -9,6 +9,6 @@ data:
   db-port: "5432"
   db-name: easybank
   # Use AWS ElastiCache for Redis
-  redis-host: easybank-redis.r1nket.0001.usw2.cache.amazonaws.com
+  redis-host: ${REDIS_ENDPOINT}
   redis-port: "6379"
   aws-region: "us-west-2"  # Current region we're using 

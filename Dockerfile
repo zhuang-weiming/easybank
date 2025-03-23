@@ -1,4 +1,4 @@
-FROM eclipse-temurin:23-jdk-jammy
+FROM eclipse-temurin:21-jdk-jammy
 
 WORKDIR /app
 
@@ -7,9 +7,12 @@ COPY target/*.jar app.jar
 
 # Copy the wait-for-it script
 COPY wait-for-it.sh /wait-for-it.sh
-RUN chmod +x /wait-for-it.sh && \
+
+# Update and install dependencies without using proxy
+RUN unset http_proxy https_proxy && \
+    chmod +x /wait-for-it.sh && \
     apt-get update && \
-    apt-get install -y netcat curl && \
+    apt-get install -y netcat-openbsd curl && \
     rm -rf /var/lib/apt/lists/*
 
 # Environment variables with defaults
