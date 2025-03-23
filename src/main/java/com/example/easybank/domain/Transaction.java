@@ -8,8 +8,12 @@ public class Transaction implements Serializable {
     private Long id;
 
     private Account sourceAccount;
+    
+    private Long sourceAccountId;
 
     private Account destinationAccount;
+    
+    private Long destinationAccountId;
 
     private BigDecimal amount;
 
@@ -107,6 +111,22 @@ public class Transaction implements Serializable {
         this.updatedAt = updatedAt;
     }
 
+    public Long getSourceAccountId() {
+        return sourceAccountId;
+    }
+
+    public void setSourceAccountId(Long sourceAccountId) {
+        this.sourceAccountId = sourceAccountId;
+    }
+
+    public Long getDestinationAccountId() {
+        return destinationAccountId;
+    }
+
+    public void setDestinationAccountId(Long destinationAccountId) {
+        this.destinationAccountId = destinationAccountId;
+    }
+
     @Override
     public boolean equals(Object that) {
         if (this == that) {
@@ -121,7 +141,9 @@ public class Transaction implements Serializable {
         Transaction other = (Transaction) that;
         return (this.getId() == null ? other.getId() == null : this.getId().equals(other.getId()))
             && (this.getSourceAccount() == null ? other.getSourceAccount() == null : this.getSourceAccount().equals(other.getSourceAccount()))
+            && (this.getSourceAccountId() == null ? other.getSourceAccountId() == null : this.getSourceAccountId().equals(other.getSourceAccountId()))
             && (this.getDestinationAccount() == null ? other.getDestinationAccount() == null : this.getDestinationAccount().equals(other.getDestinationAccount()))
+            && (this.getDestinationAccountId() == null ? other.getDestinationAccountId() == null : this.getDestinationAccountId().equals(other.getDestinationAccountId()))
             && (this.getAmount() == null ? other.getAmount() == null : this.getAmount().equals(other.getAmount()))
             && (this.getCurrency() == null ? other.getCurrency() == null : this.getCurrency().equals(other.getCurrency()))
             && (this.getTransactionType() == null ? other.getTransactionType() == null : this.getTransactionType().equals(other.getTransactionType()))
@@ -137,7 +159,9 @@ public class Transaction implements Serializable {
         int result = 1;
         result = prime * result + ((getId() == null) ? 0 : getId().hashCode());
         result = prime * result + ((getSourceAccount() == null) ? 0 : getSourceAccount().hashCode());
+        result = prime * result + ((getSourceAccountId() == null) ? 0 : getSourceAccountId().hashCode());
         result = prime * result + ((getDestinationAccount() == null) ? 0 : getDestinationAccount().hashCode());
+        result = prime * result + ((getDestinationAccountId() == null) ? 0 : getDestinationAccountId().hashCode());
         result = prime * result + ((getAmount() == null) ? 0 : getAmount().hashCode());
         result = prime * result + ((getCurrency() == null) ? 0 : getCurrency().hashCode());
         result = prime * result + ((getTransactionType() == null) ? 0 : getTransactionType().hashCode());
@@ -156,7 +180,9 @@ public class Transaction implements Serializable {
         sb.append("Hash = ").append(hashCode());
         sb.append(", id=").append(id);
         sb.append(", sourceAccount=").append(sourceAccount);
+        sb.append(", sourceAccountId=").append(sourceAccountId);
         sb.append(", destinationAccount=").append(destinationAccount);
+        sb.append(", destinationAccountId=").append(destinationAccountId);
         sb.append(", amount=").append(amount);
         sb.append(", currency=").append(currency);
         sb.append(", transactionType=").append(transactionType);

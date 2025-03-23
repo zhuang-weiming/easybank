@@ -48,29 +48,33 @@ public class TransactionService {
                 .orElseThrow(() -> new IllegalArgumentException("Destination account not found: " + destinationAccountNumber));
         
         // Validate accounts have all required data
-        if (sourceAccount.getAccountNumber() == null || destinationAccount.getAccountNumber() == null ||
-            sourceAccount.getAccountHolder() == null || destinationAccount.getAccountHolder() == null) {
-            
+        if (sourceAccount.getAccountNumber() == null || destinationAccount.getAccountNumber() == null) {
             // Fix the account data if needed by forcing a direct database update
             if (sourceAccount.getAccountNumber() == null) {
                 sourceAccount.setAccountNumber(sourceAccountNumber);
-            }
-            if (sourceAccount.getAccountHolder() == null) {
-                sourceAccount.setAccountHolder("Account Holder " + sourceAccountNumber);
-            }
-            if (sourceAccount.getAccountType() == null) {
-                sourceAccount.setAccountType("CHECKING");
             }
             
             if (destinationAccount.getAccountNumber() == null) {
                 destinationAccount.setAccountNumber(destinationAccountNumber);
             }
-            if (destinationAccount.getAccountHolder() == null) {
-                destinationAccount.setAccountHolder("Account Holder " + destinationAccountNumber);
-            }
-            if (destinationAccount.getAccountType() == null) {
-                destinationAccount.setAccountType("CHECKING");
-            }
+        }
+        
+        // Set default values for accountHolder and accountType only if they are null
+        if (sourceAccount.getAccountHolder() == null) {
+            // Try to look up the account by ID to get the correct account holder
+            sourceAccount.setAccountHolder("Account Holder " + sourceAccountNumber);
+        }
+        
+        if (sourceAccount.getAccountType() == null) {
+            sourceAccount.setAccountType("CHECKING");
+        }
+        
+        if (destinationAccount.getAccountHolder() == null) {
+            destinationAccount.setAccountHolder("Account Holder " + destinationAccountNumber);
+        }
+        
+        if (destinationAccount.getAccountType() == null) {
+            destinationAccount.setAccountType("CHECKING");
         }
         
         if (sourceAccount.getBalance().compareTo(amount) < 0) {
@@ -98,7 +102,23 @@ public class TransactionService {
     }
     
     public List<Transaction> getAccountTransactions(String accountNumber) {
-        return transactionRepository.findBySourceAccountAccountNumberOrDestinationAccountAccountNumber(
-                accountNumber, accountNumber);
+        List<Transaction> transactions = transactionRepository.findBySourceAccountAccountNumberOrDestinationAccountAccountNumber(accountNumber);
+        
+        // Populate the account information for each transaction
+        for (Transaction transaction : transactions) {
+            if (transaction.getSourceAccount() == null && transaction.getSourceAccountId() != null) {
+                // Fetch the source account using the repository
+                accountRepository.findById(transaction.getSourceAccountId())
+                        .ifPresent(transaction::setSourceAccount);
+            }
+            
+            if (transaction.getDestinationAccount() == null && transaction.getDestinationAccountId() != null) {
+                // Fetch the destination account using the repository
+                accountRepository.findById(transaction.getDestinationAccountId())
+                        .ifPresent(transaction::setDestinationAccount);
+            }
+        }
+        
+        return transactions;
     }
 }
