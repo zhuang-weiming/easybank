@@ -4,9 +4,9 @@ import com.example.easybank.domain.Account;
 import com.example.easybank.domain.Transaction;
 import com.example.easybank.service.AccountService;
 import com.example.easybank.service.TransactionService;
-import io.swagger.annotations.Api;
-import io.swagger.annotations.ApiOperation;
-import io.swagger.annotations.ApiParam;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -15,7 +15,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/accounts")
-@Api(tags = "Account Management", description = "APIs for managing bank accounts and transactions")  
+@Tag(name = "Account Management", description = "APIs for managing bank accounts and transactions")
 public class AccountController {
     private final TransactionService transactionService;
     private final AccountService accountService;
@@ -25,22 +25,22 @@ public class AccountController {
         this.accountService = accountService;
     }
     
-    @ApiOperation(value = "Get account details", notes = "Retrieves account information by account number")
+    @Operation(summary = "Get account details", description = "Retrieves account information by account number")
     @GetMapping("/{accountNumber}")
     public ResponseEntity<Account> getAccount(
-            @ApiParam(value = "Account number", required = true)
+            @Parameter(description = "Account number", required = true)
             @PathVariable String accountNumber) {
         return ResponseEntity.ok(transactionService.getAccount(accountNumber));
     }
     
-    @ApiOperation(value = "Transfer money", notes = "Transfer money between two accounts")
+    @Operation(summary = "Transfer money", description = "Transfer money between two accounts")
     @PostMapping("/{sourceAccountNumber}/transfer")
     public ResponseEntity<Transaction> transfer(
-            @ApiParam(value = "Source account number", required = true)
+            @Parameter(description = "Source account number", required = true)
             @PathVariable String sourceAccountNumber,
-            @ApiParam(value = "Destination account number", required = true)
+            @Parameter(description = "Destination account number", required = true)
             @RequestParam String destinationAccountNumber,
-            @ApiParam(value = "Amount to transfer", required = true, example = "100.00")
+            @Parameter(description = "Amount to transfer", required = true, example = "100.00")
             @RequestParam BigDecimal amount) {
         Transaction transaction = transactionService.processTransaction(
                 sourceAccountNumber,
@@ -50,24 +50,24 @@ public class AccountController {
         return ResponseEntity.ok(transaction);
     }
     
-    @ApiOperation(value = "Get account transactions", notes = "Retrieves all transactions for a specific account")
+    @Operation(summary = "Get account transactions", description = "Retrieves all transactions for a specific account")
     @GetMapping("/{accountNumber}/transactions")
     public ResponseEntity<List<Transaction>> getAccountTransactions(
-            @ApiParam(value = "Account number", required = true)
+            @Parameter(description = "Account number", required = true)
             @PathVariable String accountNumber) {
         return ResponseEntity.ok(transactionService.getAccountTransactions(accountNumber));
     }
 
-    @ApiOperation(value = "Create new account", notes = "Creates a new bank account with the specified details")
+    @Operation(summary = "Create new account", description = "Creates a new bank account with the specified details")
     @PostMapping
     public ResponseEntity<Account> createAccount(
-            @ApiParam(value = "Account holder name", required = true)
+            @Parameter(description = "Account holder name", required = true)
             @RequestParam String accountHolder,
-            @ApiParam(value = "Account type (e.g. SAVINGS, CHECKING)", required = true)
+            @Parameter(description = "Account type (e.g. SAVINGS, CHECKING)", required = true)
             @RequestParam String accountType,
-            @ApiParam(value = "Currency code (e.g. USD)", required = false)
+            @Parameter(description = "Currency code (e.g. USD)", required = false)
             @RequestParam(required = false, defaultValue = "USD") String currency,
-            @ApiParam(value = "Initial balance", required = false, example = "0.00")
+            @Parameter(description = "Initial balance", required = false, example = "0.00")
             @RequestParam(required = false) BigDecimal initialBalance) {
         return ResponseEntity.ok(accountService.createAccount(accountHolder, accountType, currency, initialBalance));
     }

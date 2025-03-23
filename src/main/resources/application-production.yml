@@ -1,0 +1,77 @@
+spring:
+  datasource:
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 5
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+  
+  redis:
+    host: ${SPRING_REDIS_HOST}
+    port: ${SPRING_REDIS_PORT}
+    timeout: 2000
+  
+  jpa:
+    database-platform: com.example.easybank.config.CustomPostgreSQLDialect
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+  
+  cache:
+    type: redis
+    redis:
+      time-to-live: 300000
+      key-prefix: easybank
+    cache-names: accounts
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: always
+  health:
+    redis:
+      enabled: true
+    db:
+      enabled: true
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+    distribution:
+      percentiles-histogram:
+        transaction.processing.time: true
+      percentiles:
+        transaction.processing.time: 0.5, 0.95, 0.99
+      sla:
+        transaction.processing.time: 100ms, 500ms, 1000ms
+
+app:
+  rate-limit:
+    max-requests-per-minute: ${MAX_REQUESTS_PER_MINUTE:600}
+    max-transactions-per-minute: ${MAX_TRANSACTIONS_PER_MINUTE:100}
+    retry-after-seconds: ${RETRY_AFTER_SECONDS:30}
+
+logging:
+  level:
+    com.example.easybank: INFO
+    org.springframework.transaction: INFO
+    org.springframework.cache: INFO
+    org.springframework.data.redis: INFO
+
+springdoc:
+  api-docs:
+    enabled: true
+  swagger-ui:
+    enabled: true 
