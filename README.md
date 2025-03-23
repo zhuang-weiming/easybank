@@ -319,3 +319,212 @@ Metrics available at `/actuator/prometheus`:
 ### License
 
 This project is licensed under the MIT License.
+
+## AWS Infrastructure Design
+
+### Overview
+EasyBank is deployed on AWS using a multi-VPC architecture with the following key components:
+- Amazon EKS (Elastic Kubernetes Service) for container orchestration
+- Amazon RDS (PostgreSQL) for persistent data storage
+- Amazon ElastiCache (Redis) for caching and session management
+
+### Network Architecture
+
+#### VPC Layout
+1. **EKS VPC (192.168.0.0/16)**
+   - Contains EKS cluster and worker nodes
+   - Multiple subnets across availability zones
+   - Route tables configured for inter-VPC communication
+   - Security groups controlling access to EKS nodes
+
+2. **ElastiCache VPC (172.31.0.0/16)**
+   - Contains Redis ElastiCache cluster
+   - Default VPC subnets
+   - Route tables updated for VPC peering
+   - Security groups allowing Redis access
+
+### VPC Peering Configuration
+```
++------------------------+        Peering         +------------------------+
+|     EKS VPC           | <------------------->  |   ElastiCache VPC     |
+| (192.168.0.0/16)      |    Connection         |   (172.31.0.0/16)     |
+|                       |                        |                        |
+| +------------------+  |                        |  +------------------+ |
+| |   EKS Cluster    |  |                        |  |    ElastiCache   | |
+| |   Worker Nodes   |  |                        |  |    Redis Cluster | |
+| +------------------+  |                        |  +------------------+ |
+|                       |                        |                        |
++------------------------+                        +------------------------+
+```
+
+### Security Configuration
+
+#### Security Groups
+1. **EKS Node Security Group** (`<eks-security-group-id>`)
+   - Outbound: Allow all traffic
+   - Inbound: Allow traffic from within the security group
+   - Inbound: Allow traffic from control plane
+
+2. **ElastiCache Security Group** (`<cache-security-group-id>`)
+   - Inbound: Allow TCP 6379 from EKS node security group
+   - Outbound: Allow all traffic
+
+### Network Routing
+
+#### Route Tables
+1. **EKS VPC Route Tables**
+   ```
+   Destination         Target
+   192.168.0.0/16     local
+   172.31.0.0/16      <vpc-peering-connection-id> (VPC Peering)
+   0.0.0.0/0          <internet-gateway-id> (Internet Gateway)
+   ```
+
+2. **ElastiCache VPC Route Table**
+   ```
+   Destination         Target
+   172.31.0.0/16      local
+   192.168.0.0/16     <vpc-peering-connection-id> (VPC Peering)
+   0.0.0.0/0          <internet-gateway-id> (Internet Gateway)
+   ```
+
+### Service Endpoints
+- **PostgreSQL RDS**: `<rds-endpoint>:5432`
+- **Redis ElastiCache**: `<elasticache-endpoint>:6379`
+
+### Deployment Architecture
+```
+                                    ┌─────────────────┐
+                                    │   Kubernetes    │
+                                    │   Deployment    │
+                                    └────────┬────────┘
+                                             │
+                                    ┌────────┴────────┐
+                                    │    EKS Pods     │
+                                    └────────┬────────┘
+                                             │
+                              ┌──────────────┴──────────────┐
+                              │                             │
+                     ┌────────┴────────┐           ┌───────┴────────┐
+                     │  PostgreSQL RDS  │           │Redis ElastiCache│
+                     └─────────────────┘           └────────────────┘
+```
+
+### Infrastructure Management
+- VPC Peering managed through AWS CLI/Console
+- Security groups and route tables configured via AWS CLI
+- EKS cluster managed through `kubectl` and AWS EKS CLI
+- Database and cache connections configured through Kubernetes ConfigMaps
+
+### Network Flow
+1. Application pods in EKS cluster initiate connections
+2. Traffic to Redis flows through VPC peering connection
+3. Security groups validate access permissions
+4. Route tables direct traffic between VPCs
+5. ElastiCache accepts connections from authorized security groups
+
+### Best Practices Implemented
+1. VPC isolation for different service types
+2. Security group principle of least privilege
+3. VPC peering for secure inter-VPC communication
+4. Redundant route table entries for high availability
+5. Clear CIDR block separation between VPCs
+
+### Monitoring and Maintenance
+- CloudWatch metrics for EKS and ElastiCache
+- VPC Flow Logs for network troubleshooting
+- Security group and route table auditing
+- Regular validation of VPC peering status
+
+## Application Components
+
+### Backend (Spring Boot)
+- Java 21 runtime
+- Spring Boot 2.7.0
+- PostgreSQL for persistent storage
+- Redis for caching and rate limiting
+
+### Infrastructure as Code
+- Kubernetes manifests for deployment
+- AWS CLI commands for network configuration
+- Security group and route table definitions
+
+## Development and Deployment
+
+### Local Development
+1. Clone the repository
+2. Configure AWS credentials
+3. Install required tools (AWS CLI, kubectl)
+4. Set up local environment variables
+
+### Production Deployment
+1. Build Docker image
+2. Push to Amazon ECR
+3. Deploy to EKS cluster
+4. Verify connectivity to Redis and PostgreSQL
+
+## Troubleshooting
+
+### Common Issues
+1. VPC Peering Status
+   ```bash
+   aws ec2 describe-vpc-peering-connections
+   ```
+
+2. Security Group Rules
+   ```bash
+   aws ec2 describe-security-group-rules
+   ```
+
+3. Route Table Configuration
+   ```bash
+   aws ec2 describe-route-tables
+   ```
+
+4. Pod Connectivity
+   ```bash
+   kubectl exec -it <pod-name> -- nc -zv <redis-endpoint> 6379
+   ```
+
+### Health Checks
+- Database connectivity
+- Redis connection status
+- VPC peering status
+- Security group rule validation
+
+## Security Considerations
+- VPC isolation
+- Security group restrictions
+- No public endpoints for databases
+- Encrypted communication
+- Regular security audits
+- **Never commit AWS account IDs, access keys, or other sensitive information to version control**
+- Use AWS Secrets Manager or Parameter Store for sensitive configuration
+- Use environment variables for local development
+
+## Environment Variables
+The following environment variables should be set:
+
+```bash
+# AWS Configuration
+export AWS_REGION=<your-aws-region>
+export AWS_ACCOUNT_ID=<your-aws-account-id>
+
+# Database Configuration
+export DB_HOST=<your-rds-endpoint>
+export DB_PORT=5432
+export DB_NAME=easybank
+
+# Redis Configuration
+export REDIS_HOST=<your-elasticache-endpoint>
+export REDIS_PORT=6379
+```
+
+## Best Practices for Security
+1. Use AWS IAM roles and policies with least privilege
+2. Regularly rotate credentials
+3. Enable AWS CloudTrail for audit logging
+4. Use VPC Flow Logs for network monitoring
+5. Implement AWS Config rules for security compliance
+6. Never commit sensitive information to version control
+7. Use `.gitignore` to prevent accidental commits of sensitive files

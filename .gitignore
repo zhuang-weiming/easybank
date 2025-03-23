@@ -44,3 +44,42 @@ reports/
 
 # Local development files
 docker-compose.override.yml
+
+# AWS sensitive information
+.aws/
+aws.config
+aws.json
+**/aws-credentials.json
+**/aws-config.json
+
+# Environment files
+.env
+.env.*
+*.env
+.envrc
+
+# IDE and editor files
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Build and dependency directories
+target/
+node_modules/
+dist/
+build/
+
+# Logs
+*.log
+logs/
+log/
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
