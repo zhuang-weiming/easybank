@@ -40,11 +40,7 @@ class AccountServiceTest {
         expectedAccount.setCurrency(currency);
         expectedAccount.setBalance(initialBalance);
 
-        when(accountRepository.save(any(Account.class))).thenAnswer(invocation -> {
-            Account savedAccount = invocation.getArgument(0);
-            expectedAccount.setAccountNumber(savedAccount.getAccountNumber());
-            return expectedAccount;
-        });
+        when(accountRepository.save(any(Account.class))).thenReturn(1);
 
         // Act
         Account createdAccount = accountService.createAccount(accountHolder, accountType, currency, initialBalance);
@@ -72,7 +68,7 @@ class AccountServiceTest {
         expectedAccount.setCurrency(currency);
         expectedAccount.setBalance(BigDecimal.ZERO);
 
-        when(accountRepository.save(any(Account.class))).thenReturn(expectedAccount);
+        when(accountRepository.save(any(Account.class))).thenReturn(1);
 
         // Act
         Account createdAccount = accountService.createAccount(accountHolder, accountType, currency, null);

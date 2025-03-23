@@ -281,15 +281,16 @@
   </select>
 
   <insert id="save" keyProperty="id" parameterType="com.example.easybank.domain.Account" useGeneratedKeys="true">
-    INSERT INTO accounts (account_number, account_holder, balance, version, account_type, currency)
-    VALUES (#{accountNumber}, #{accountHolder}, #{balance}, #{version}, #{accountType}, #{currency})
+    INSERT INTO accounts (account_number, account_holder, balance, version, account_type, currency, status)
+    VALUES (#{accountNumber}, #{accountHolder}, #{balance}, #{version}, #{accountType}, #{currency}, #{status})
     ON CONFLICT (account_number)
     DO UPDATE SET
         account_holder = #{accountHolder},
         balance = #{balance},
         version = #{version} + 1,
         account_type = #{accountType},
-        currency = #{currency}
+        currency = #{currency},
+        status = #{status}
     RETURNING *
   </insert>
 </mapper>
