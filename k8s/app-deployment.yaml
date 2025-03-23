@@ -25,7 +25,7 @@ spec:
     spec:
       containers:
       - name: easybank-app
-        image: ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/easybank-app:latest
+        image: 217281135028.dkr.ecr.us-west-2.amazonaws.com/easybank-app:latest
         ports:
         - containerPort: 8080
         env:
@@ -63,14 +63,14 @@ spec:
         - name: RETRY_AFTER_SECONDS
           value: "30"
         - name: JAVA_OPTS
-          value: "-Xms256m -Xmx512m -XX:+UseG1GC -Dspring.profiles.active=production"
+          value: "-Xms64m -Xmx128m -XX:+UseG1GC -Dspring.profiles.active=production"
         resources:
           requests:
-            memory: "512Mi"
-            cpu: "250m"
+            memory: "128Mi"
+            cpu: "100m"
           limits:
-            memory: "1Gi"
-            cpu: "500m"
+            memory: "192Mi"
+            cpu: "200m"
         readinessProbe:
           httpGet:
             path: /actuator/health

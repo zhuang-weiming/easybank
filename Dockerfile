@@ -1,4 +1,4 @@
-FROM --platform=$TARGETPLATFORM eclipse-temurin:21-jdk-jammy
+FROM eclipse-temurin:21-jdk-jammy
 
 WORKDIR /app
 
