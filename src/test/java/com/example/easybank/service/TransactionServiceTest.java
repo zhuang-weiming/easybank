@@ -11,6 +11,7 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -148,5 +149,59 @@ class TransactionServiceTest {
         assertEquals(new BigDecimal("600"), destinationAccount.getBalance());
         verify(accountRepository, times(1)).update(sourceAccount);
         verify(accountRepository, times(1)).update(destinationAccount);
+    }
+
+    @Test
+    void getAccountTransactions_LoadsAccountsForTransactions() {
+        // Arrange
+        String accountNumber = "123";
+        
+        // Create test transaction with IDs but no account objects
+        Transaction transaction = new Transaction();
+        transaction.setId(1L);
+        transaction.setSourceAccountId(10L);
+        transaction.setDestinationAccountId(20L);
+        transaction.setAmount(new BigDecimal("100"));
+        transaction.setCurrency("USD");
+        transaction.setTransactionType("TRANSFER");
+        transaction.setStatus(TransactionStatus.COMPLETED);
+        
+        // Create the accounts that should be loaded
+        Account sourceAccount = new Account();
+        sourceAccount.setId(10L);
+        sourceAccount.setAccountNumber("123");
+        sourceAccount.setAccountHolder("John Doe");
+        
+        Account destinationAccount = new Account();
+        destinationAccount.setId(20L);
+        destinationAccount.setAccountNumber("456");
+        destinationAccount.setAccountHolder("Jane Smith");
+        
+        // Mock repository responses
+        when(transactionRepository.findBySourceAccountAccountNumberOrDestinationAccountAccountNumber(accountNumber))
+            .thenReturn(List.of(transaction));
+        when(accountRepository.findById(10L)).thenReturn(Optional.of(sourceAccount));
+        when(accountRepository.findById(20L)).thenReturn(Optional.of(destinationAccount));
+        
+        // Act
+        List<Transaction> result = transactionService.getAccountTransactions(accountNumber);
+        
+        // Assert
+        assertEquals(1, result.size());
+        Transaction resultTransaction = result.get(0);
+        
+        // Verify accounts were loaded correctly
+        assertNotNull(resultTransaction.getSourceAccount());
+        assertEquals(sourceAccount.getId(), resultTransaction.getSourceAccount().getId());
+        assertEquals(sourceAccount.getAccountHolder(), resultTransaction.getSourceAccount().getAccountHolder());
+        
+        assertNotNull(resultTransaction.getDestinationAccount());
+        assertEquals(destinationAccount.getId(), resultTransaction.getDestinationAccount().getId());
+        assertEquals(destinationAccount.getAccountHolder(), resultTransaction.getDestinationAccount().getAccountHolder());
+        
+        // Verify repository methods were called
+        verify(transactionRepository).findBySourceAccountAccountNumberOrDestinationAccountAccountNumber(accountNumber);
+        verify(accountRepository).findById(10L);
+        verify(accountRepository).findById(20L);
     }
 }
