@@ -1,4 +1,4 @@
-FROM eclipse-temurin:21-jdk-jammy
+FROM --platform=$TARGETPLATFORM eclipse-temurin:21-jdk-jammy
 
 WORKDIR /app
 
@@ -22,8 +22,12 @@ ENV SPRING_DATASOURCE_PASSWORD=postgres
 ENV SPRING_REDIS_HOST=redis
 ENV SPRING_REDIS_PORT=6379
 ENV SERVER_PORT=8080
+ENV DB_HOST=postgres
+ENV DB_PORT=5432
+ENV REDIS_HOST=redis
+ENV REDIS_PORT=6379
 
 EXPOSE 8080
 
 # Wait for PostgreSQL and Redis to be ready before starting the application
-ENTRYPOINT ["/bin/sh", "-c", "/wait-for-it.sh postgres:5432 -t 60 -- /wait-for-it.sh redis:6379 -t 60 -- java -jar app.jar"] 
+ENTRYPOINT ["/bin/sh", "-c", "/wait-for-it.sh $DB_HOST:$DB_PORT -t 60 -- /wait-for-it.sh $REDIS_HOST:$REDIS_PORT -t 60 -- java -jar app.jar"] 

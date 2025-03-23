@@ -1,8 +1,8 @@
 spring:
   datasource:
-    url: jdbc:postgresql://localhost:5432/easybank
-    username: postgres
-    password: postgres
+    url: ${TEST_DB_URL:jdbc:postgresql://localhost:5432/easybank_test}
+    username: ${TEST_DB_USERNAME}
+    password: ${TEST_DB_PASSWORD}
     driver-class-name: org.postgresql.Driver
 
 mybatis:

@@ -232,3 +232,90 @@ psql -h <db-host> -U <db-user> -d easybank -f <backup-file>
 ## License
 
 This project is licensed under the MIT License.
+
+## EasyBank Application
+
+A robust banking application with transaction processing, rate limiting, and monitoring capabilities.
+
+### Version 2.0.0 Release Notes
+
+#### New Features
+- Enhanced transaction validation with smart defaults
+- Improved error handling and validation messages
+- Rate limiting for API endpoints and transactions
+- Prometheus metrics integration
+- Kubernetes deployment support with resource optimization
+- AWS deployment support with RDS and ElastiCache
+
+#### Security Improvements
+- Removed hardcoded credentials
+- Environment variable based configuration
+- Secure secret management in Kubernetes
+- Rate limiting protection against abuse
+
+#### Performance Optimizations
+- Redis caching for frequently accessed data
+- Optimized database queries
+- Connection pooling improvements
+- Resource-efficient Kubernetes deployment
+
+### Quick Start
+
+1. Set required environment variables:
+```bash
+export DB_USERNAME=your_db_username
+export DB_PASSWORD=your_db_password
+export DB_NAME=easybank
+```
+
+2. Start the application using Docker Compose:
+```bash
+docker-compose up -d
+```
+
+3. Or deploy to Kubernetes:
+```bash
+# First set up AWS services
+./setup-aws-services.sh
+
+# Then deploy the application
+./deploy-to-aws.sh
+```
+
+### API Endpoints
+
+#### Account Operations
+- GET `/api/v1/accounts` - List accounts
+- POST `/api/v1/accounts` - Create account
+- GET `/api/v1/accounts/{id}` - Get account details
+- PUT `/api/v1/accounts/{id}` - Update account
+- DELETE `/api/v1/accounts/{id}` - Delete account
+
+#### Transaction Operations
+- POST `/api/v1/transactions` - Create transaction
+- GET `/api/v1/transactions` - List transactions
+
+### Configuration
+
+The application uses the following default values which can be overridden:
+- Account Types: "CHECKING" (default), "SAVINGS"
+- Account Status: "ACTIVE" (default), "INACTIVE", "BLOCKED"
+- Rate Limits: 600 requests/minute per IP, 100 transactions/minute per account
+
+### Monitoring
+
+Metrics available at `/actuator/prometheus`:
+- Transaction processing time
+- Success/failure rates
+- Cache hit/miss ratios
+- Rate limiting metrics
+
+### Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Submit a pull request with tests
+
+### License
+
+This project is licensed under the MIT License.

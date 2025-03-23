@@ -1,8 +1,46 @@
 # Compiled class file
 *.class
 target/
+
+# IDE files
 .idea/
 .vscode/
-*.log
-.DS_Store
 .cursor/
+*.iml
+*.iws
+*.ipr
+
+# Logs
+*.log
+logs/
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Environment files
+.env
+*.env
+!.env.example
+
+# Kubernetes secrets
+*-secrets.yaml
+!example-secrets.yaml
+
+# Build artifacts
+*.jar
+*.war
+*.ear
+*.zip
+*.tar.gz
+
+# Test reports
+test-output/
+reports/
+
+# Backup files
+*.bak
+*~
+
+# Local development files
+docker-compose.override.yml

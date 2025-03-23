@@ -20,22 +20,16 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 
+import lombok.RequiredArgsConstructor;
+
 @Service
 @Slf4j
-//@RequiredArgsConstructor
+@RequiredArgsConstructor
 public class TransactionService {
     private final AccountRepository accountRepository;
     private final TransactionRepository transactionRepository;
     private final RateLimiterService rateLimiterService;
 
-    public TransactionService(AccountRepository accountRepository, 
-                              TransactionRepository transactionRepository,
-                              RateLimiterService rateLimiterService) {
-        this.accountRepository = accountRepository;
-        this.transactionRepository = transactionRepository;
-        this.rateLimiterService = rateLimiterService;
-    }
-    
     @Cacheable(value = "accounts", key = "#accountNumber", unless = "#result == null")
     public Account getAccount(String accountNumber) {
         log.debug("Cache miss for account: {}", accountNumber);
@@ -186,49 +180,42 @@ public class TransactionService {
     
     private void validateAccounts(Account sourceAccount, Account destinationAccount, 
                                 String sourceAccountNumber, String destinationAccountNumber) {
-        // Validate accounts have all required data
-        if (sourceAccount.getAccountNumber() == null || destinationAccount.getAccountNumber() == null) {
-            // Fix the account data if needed by forcing a direct database update
-            if (sourceAccount.getAccountNumber() == null) {
-                sourceAccount.setAccountNumber(sourceAccountNumber);
-            }
-            
-            if (destinationAccount.getAccountNumber() == null) {
-                destinationAccount.setAccountNumber(destinationAccountNumber);
-            }
+        // Populate default values for null fields
+        if (sourceAccount.getAccountNumber() == null) {
+            sourceAccount.setAccountNumber(sourceAccountNumber);
+        }
+        if (destinationAccount.getAccountNumber() == null) {
+            destinationAccount.setAccountNumber(destinationAccountNumber);
         }
         
-        // Set default values for accountHolder and accountType only if they are null
+        // Set default values for accountHolder if null
         if (sourceAccount.getAccountHolder() == null) {
             sourceAccount.setAccountHolder("Account Holder " + sourceAccountNumber);
         }
-        
-        if (sourceAccount.getAccountType() == null) {
-            sourceAccount.setAccountType("CHECKING");
-        }
-        
         if (destinationAccount.getAccountHolder() == null) {
             destinationAccount.setAccountHolder("Account Holder " + destinationAccountNumber);
         }
         
+        // Set default values for accountType if null
+        if (sourceAccount.getAccountType() == null) {
+            sourceAccount.setAccountType("CHECKING");
+        }
         if (destinationAccount.getAccountType() == null) {
             destinationAccount.setAccountType("CHECKING");
         }
         
-        // Ensure accounts have status
+        // Set default status if null
         if (sourceAccount.getStatus() == null) {
             sourceAccount.setStatus("ACTIVE");
         }
-        
         if (destinationAccount.getStatus() == null) {
             destinationAccount.setStatus("ACTIVE");
         }
-        
-        // Check if accounts are active
+
+        // Now validate the accounts after populating defaults
         if (!"ACTIVE".equals(sourceAccount.getStatus())) {
             throw new IllegalArgumentException("Source account is not active");
         }
-        
         if (!"ACTIVE".equals(destinationAccount.getStatus())) {
             throw new IllegalArgumentException("Destination account is not active");
         }
