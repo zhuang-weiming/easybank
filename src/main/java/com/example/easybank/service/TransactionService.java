@@ -15,7 +15,6 @@ import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -98,24 +97,8 @@ public class TransactionService {
         return transaction;
     }
     
-    public List<Transaction> getFailedTransactions() {
-        return transactionRepository.findByStatus(TransactionStatus.FAILED);
-    }
-    
-    public List<Transaction> getRetryableTransactions(int maxRetries) {
-        return transactionRepository.findRetryableTransactions(TransactionStatus.FAILED, maxRetries);
-    }
-    
     public List<Transaction> getAccountTransactions(String accountNumber) {
         return transactionRepository.findBySourceAccountAccountNumberOrDestinationAccountAccountNumber(
                 accountNumber, accountNumber);
-    }
-
-    public AccountRepository getAccountRepository() {
-        return accountRepository;
-    }
-
-    public TransactionRepository getTransactionRepository() {
-        return transactionRepository;
     }
 }

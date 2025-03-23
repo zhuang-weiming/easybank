@@ -1,7 +1,6 @@
 package com.example.easybank.repository;
 
 import com.example.easybank.domain.Transaction;
-import com.example.easybank.domain.TransactionStatus;
 import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
@@ -11,12 +10,6 @@ import java.util.List;
 
 @Mapper
 public interface TransactionRepository {
-    @Select("SELECT * FROM transactions WHERE status = #{status}")
-    List<Transaction> findByStatus(@Param("status") TransactionStatus status);
-    
-    @Select("SELECT * FROM transactions WHERE status = #{status}")
-    List<Transaction> findRetryableTransactions(@Param("status") TransactionStatus status, @Param("maxRetries") int maxRetries);
-    
     @Select("SELECT t.*, " +
            "sa.id as source_id, sa.account_number as source_account_number, sa.account_holder as source_account_holder, " +
            "sa.balance as source_balance, sa.currency as source_currency, sa.account_type as source_account_type, sa.status as source_status, " +
