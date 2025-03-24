@@ -528,3 +528,156 @@ export REDIS_PORT=6379
 5. Implement AWS Config rules for security compliance
 6. Never commit sensitive information to version control
 7. Use `.gitignore` to prevent accidental commits of sensitive files
+
+## Performance Test Results
+
+### API Response Tests
+```bash
+# Health Check
+curl -I http://[load-balancer-url]/actuator/health
+HTTP/1.1 200 
+Content-Type: application/vnd.spring-boot.actuator.v3+json
+
+# Account Creation Test
+curl -X POST http://[load-balancer-url]/api/accounts \
+     -H 'Content-Type: application/x-www-form-urlencoded' \
+     -d 'accountHolder=John Doe&accountType=SAVINGS&currency=USD&initialBalance=1000.00'
+Response: Account created successfully with number ACC-f6ecf037
+
+# Account Query Test
+curl -X GET http://[load-balancer-url]/api/accounts/ACC-f6ecf037
+Response: Account details retrieved successfully
+
+# Money Transfer Test
+curl -X POST 'http://[load-balancer-url]/api/accounts/ACC-f6ecf037/transfer?destinationAccountNumber=ACC-323a5105&amount=59'
+Response: Transfer completed successfully with transaction ID 5ed3050a-0515-4b2b-a805-c65d7c73733e
+```
+
+### Load Test Results (JMeter)
+
+Test Configuration:
+- Duration: 3 minutes 24 seconds
+- Request Rate: 1 request per second
+- Endpoint: GET /api/accounts/{accountNumber}
+
+Performance Metrics:
+- Total Requests: 204
+- Error Rate: 0%
+- Average Response Time: 607ms
+- Min Response Time: 551ms
+- Max Response Time: 834ms
+- Throughput: 1.0 requests/second
+
+Response Time Distribution:
+```
+Time Period     Requests    Avg Response    Min    Max    Errors
+00:00-00:24    24          617ms           553    805    0
+00:24-00:54    30          617ms           568    834    0
+00:54-01:24    30          612ms           556    687    0
+01:24-01:54    30          601ms           557    686    0
+01:54-02:24    30          606ms           563    684    0
+02:24-02:54    30          607ms           552    706    0
+02:54-03:24    30          594ms           551    672    0
+```
+
+### Resource Usage
+
+Pod Resource Metrics:
+```
+NAME                            CPU(cores)   MEMORY(bytes)
+easybank-app-68c69c477b-n4th9   10m          375Mi
+```
+
+Resource Utilization:
+- Memory Usage: 375Mi out of 384Mi limit (97.6%)
+- CPU Usage: 10m (0.01 cores or 1% of CPU)
+- Pod Status: Stable under test load
+
+## Infrastructure Analysis
+
+### AWS t3.micro Instance Constraints
+
+**Instance Specifications**:
+- vCPU: 2 vCPUs (2000m)
+- Memory: 1GB (1024Mi)
+- Network: Up to 5 Gbps
+
+**Resource Distribution**:
+```
+Memory (1024Mi total):
+- System Reserved: ~200Mi
+- Kubernetes Components: ~200Mi
+- Available for Pods: ~624Mi
+- Current Pod Usage: 375Mi
+
+CPU (2000m total):
+- System Reserved: ~200m
+- Kubernetes Components: ~200m
+- Available for Pods: ~1600m
+- Current Pod Usage: 10m
+```
+
+### Current Pod Resource Configuration
+```yaml
+resources:
+  requests:
+    cpu: "100m"      # 5% of total CPU
+    memory: "256Mi"  # 25% of total memory
+  limits:
+    cpu: "200m"      # 10% of total CPU
+    memory: "384Mi"  # 37.5% of total memory
+```
+
+### Resource Utilization Analysis
+
+**Memory Usage**:
+- Pod Memory Usage: 375Mi out of 384Mi limit (97.6%)
+- Status: Operating at capacity but stable
+- Observation: High memory utilization but within configured limits
+
+**CPU Usage**:
+- Pod CPU Usage: 10m out of 200m limit (5%)
+- Status: Excellent headroom
+- Observation: CPU is not a bottleneck
+
+### Why Resource Limits Cannot Be Increased
+
+1. **Memory Constraints**:
+   - Total available memory (1024Mi) must be shared between:
+     - Operating system
+     - Kubernetes control plane
+     - System daemons
+     - Application pods
+   - Increasing pod memory limits would risk:
+     - System instability
+     - OOM (Out of Memory) kills
+     - Node failure
+     - Control plane unresponsiveness
+
+2. **CPU Constraints**:
+   - While t3.micro provides 2 vCPUs:
+     - Some capacity must be reserved for system operations
+     - Kubernetes components require CPU resources
+     - Burst capacity needs to be maintained
+   - Current CPU utilization is optimal
+
+3. **Node Stability Considerations**:
+   - Current configuration ensures:
+     - Stable node operation
+     - Reliable pod scheduling
+     - System maintenance capacity
+     - Kubernetes control plane functionality
+
+### Optimization Recommendations
+
+1. **Within Current Limits**:
+   - Optimize application memory usage
+   - Implement efficient caching strategies
+   - Fine-tune JVM heap settings
+   - Monitor and analyze memory patterns
+
+2. **Alternative Solutions** (if needed):
+   - Implement horizontal pod autoscaling
+   - Consider application code optimization
+   - Review database query efficiency
+   - Optimize Redis cache usage
