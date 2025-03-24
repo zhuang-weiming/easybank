@@ -63,28 +63,28 @@ spec:
         - name: RETRY_AFTER_SECONDS
           value: "30"
         - name: JAVA_OPTS
-          value: "-Xms64m -Xmx128m -XX:+UseG1GC -Dspring.profiles.active=production"
+          value: "-Xms128m -Xmx256m -XX:+UseG1GC -Dspring.profiles.active=production"
         resources:
           requests:
-            memory: "128Mi"
+            memory: "256Mi"
             cpu: "100m"
           limits:
-            memory: "192Mi"
+            memory: "384Mi"
             cpu: "200m"
         readinessProbe:
           httpGet:
             path: /actuator/health
             port: 8080
-          initialDelaySeconds: 30
-          periodSeconds: 10
+          initialDelaySeconds: 60
+          periodSeconds: 15
           timeoutSeconds: 5
           failureThreshold: 3
         livenessProbe:
           httpGet:
             path: /actuator/health
             port: 8080
-          initialDelaySeconds: 60
-          periodSeconds: 15
+          initialDelaySeconds: 90
+          periodSeconds: 20
           timeoutSeconds: 5
           failureThreshold: 3
       imagePullSecrets:

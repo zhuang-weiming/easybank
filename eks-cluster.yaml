@@ -10,9 +10,9 @@ metadata:
 managedNodeGroups:
   - name: easybank-workers
     instanceType: t3.micro  # Smallest viable instance type for testing
-    desiredCapacity: 2
+    desiredCapacity: 1
     minSize: 1
-    maxSize: 3
+    maxSize: 2
     volumeSize: 20  # 20 GB root volume
     iam:
       withAddonPolicies:
