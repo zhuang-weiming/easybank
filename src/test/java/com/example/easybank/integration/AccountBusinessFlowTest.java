@@ -1,10 +1,5 @@
 package com.example.easybank.integration;
 
-import com.example.easybank.domain.Account;
-import com.example.easybank.domain.Transaction;
-import com.example.easybank.domain.TransactionStatus;
-import com.example.easybank.domain.TransactionType;
-import com.example.easybank.dto.TransactionResponse;
 import com.example.easybank.service.AccountService;
 import com.example.easybank.service.TransactionService;
 import org.junit.jupiter.api.Test;
@@ -19,11 +14,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
-import java.util.List;
-
 import static org.hamcrest.Matchers.is;
-import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
