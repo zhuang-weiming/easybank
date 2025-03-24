@@ -108,7 +108,7 @@ max-transactions-per-minute: 50
 ### Local Setup
 ```bash
 # Clone repository
-git clone https://github.com/your-username/easy-bank.git
+git clone https://github.com/zhuang-weiming/easybank
 cd easy-bank
 
 # Set environment variables
