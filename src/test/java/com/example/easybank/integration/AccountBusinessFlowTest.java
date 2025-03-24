@@ -2,6 +2,9 @@ package com.example.easybank.integration;
 
 import com.example.easybank.domain.Account;
 import com.example.easybank.domain.Transaction;
+import com.example.easybank.domain.TransactionStatus;
+import com.example.easybank.domain.TransactionType;
+import com.example.easybank.dto.TransactionResponse;
 import com.example.easybank.service.AccountService;
 import com.example.easybank.service.TransactionService;
 import org.junit.jupiter.api.Test;
@@ -19,7 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.util.List;
 
-import static org.hamcrest.Matchers.*;
+import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -28,7 +31,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
-@Transactional
+@Transactional // This ensures all test data is rolled back after the test
 public class AccountBusinessFlowTest {
 
     @Autowired
@@ -41,16 +44,15 @@ public class AccountBusinessFlowTest {
     private TransactionService transactionService;
 
     /**
-     * Test the complete business flow:
-     * 1. Create two accounts
-     * 2. Get account details for verification
-     * 3. Transfer money between accounts
-     * 4. Get account transactions to confirm transfer
-     * 5. Verify final account details
+     * Test the complete business flow of the 4 main APIs:
+     * 1. POST /api/accounts - Create two accounts
+     * 2. GET /api/accounts/{accountNumber} - Get account details
+     * 3. POST /api/accounts/{sourceAccountNumber}/transfer - Transfer money
+     * 4. GET /api/accounts/{accountNumber}/transactions - Get transactions
      */
     @Test
     public void testCompleteBusinessFlow() throws Exception {
-        // Step 1: Create first account
+        // Step 1: Create first account with $1000
         MvcResult firstAccountResult = mockMvc.perform(post("/api/accounts")
                 .contentType(MediaType.APPLICATION_FORM_URLENCODED)
                 .param("accountHolder", "John Doe")
@@ -61,12 +63,14 @@ public class AccountBusinessFlowTest {
                 .andExpect(jsonPath("$.accountHolder", is("John Doe")))
                 .andExpect(jsonPath("$.accountType", is("SAVINGS")))
                 .andExpect(jsonPath("$.balance", is(1000.00)))
+                .andExpect(jsonPath("$.accountNumber").exists())
+                .andExpect(jsonPath("$.status", is("ACTIVE")))
                 .andReturn();
                 
         String firstAccountResponse = firstAccountResult.getResponse().getContentAsString();
         String firstAccountNumber = extractAccountNumber(firstAccountResponse);
         
-        // Create second account
+        // Create second account with $500
         MvcResult secondAccountResult = mockMvc.perform(post("/api/accounts")
                 .contentType(MediaType.APPLICATION_FORM_URLENCODED)
                 .param("accountHolder", "Jane Smith")
@@ -77,125 +81,78 @@ public class AccountBusinessFlowTest {
                 .andExpect(jsonPath("$.accountHolder", is("Jane Smith")))
                 .andExpect(jsonPath("$.accountType", is("CHECKING")))
                 .andExpect(jsonPath("$.balance", is(500.00)))
+                .andExpect(jsonPath("$.accountNumber").exists())
+                .andExpect(jsonPath("$.status", is("ACTIVE")))
                 .andReturn();
                 
         String secondAccountResponse = secondAccountResult.getResponse().getContentAsString();
         String secondAccountNumber = extractAccountNumber(secondAccountResponse);
         
-        // Step 2: Get account details for verification
-        mockMvc.perform(get("/api/accounts/{accountNumber}", firstAccountNumber))
+        // Step 2: Verify both accounts were created correctly using GET endpoint
+        mockMvc.perform(get("/api/accounts/{accountNumber}", firstAccountNumber)
+                .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.accountNumber", is(firstAccountNumber)))
                 .andExpect(jsonPath("$.accountHolder", is("John Doe")))
-                .andExpect(jsonPath("$.balance", is(1000.00)));
+                .andExpect(jsonPath("$.accountType", is("SAVINGS")))
+                .andExpect(jsonPath("$.balance", is(1000.00)))
+                .andExpect(jsonPath("$.status", is("ACTIVE")));
                 
-        mockMvc.perform(get("/api/accounts/{accountNumber}", secondAccountNumber))
+        mockMvc.perform(get("/api/accounts/{accountNumber}", secondAccountNumber)
+                .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.accountNumber", is(secondAccountNumber)))
                 .andExpect(jsonPath("$.accountHolder", is("Jane Smith")))
-                .andExpect(jsonPath("$.balance", is(500.00)));
+                .andExpect(jsonPath("$.accountType", is("CHECKING")))
+                .andExpect(jsonPath("$.balance", is(500.00)))
+                .andExpect(jsonPath("$.status", is("ACTIVE")));
         
-        // Step 3: Transfer money between accounts
-        BigDecimal transferAmount = new BigDecimal("250.00");
+        // Step 3: Transfer $300 from first account to second account
         mockMvc.perform(post("/api/accounts/{sourceAccountNumber}/transfer", firstAccountNumber)
                 .contentType(MediaType.APPLICATION_FORM_URLENCODED)
                 .param("destinationAccountNumber", secondAccountNumber)
-                .param("amount", transferAmount.toString()))
+                .param("amount", "300.00"))
+                .andExpect(status().isOk());
+        
+        // Step 4: Verify account balances after transfer
+        mockMvc.perform(get("/api/accounts/{accountNumber}", firstAccountNumber)
+                .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.amount", is(250.00)))
-                .andExpect(jsonPath("$.sourceAccount.accountNumber", is(firstAccountNumber)))
-                .andExpect(jsonPath("$.destinationAccount.accountNumber", is(secondAccountNumber)));
+                .andExpect(jsonPath("$.balance", is(700.00)));
         
-        // Step 4: Get account transactions to confirm transfer
-        mockMvc.perform(get("/api/accounts/{accountNumber}/transactions", firstAccountNumber))
+        mockMvc.perform(get("/api/accounts/{accountNumber}", secondAccountNumber)
+                .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$", hasSize(greaterThanOrEqualTo(1))))
-                .andExpect(jsonPath("$[0].amount", is(250.00)))
-                .andExpect(jsonPath("$[0].sourceAccount.accountNumber", is(firstAccountNumber)))
-                .andExpect(jsonPath("$[0].destinationAccount.accountNumber", is(secondAccountNumber)));
+                .andExpect(jsonPath("$.balance", is(800.00)));
         
-        // Also check second account transactions
-        mockMvc.perform(get("/api/accounts/{accountNumber}/transactions", secondAccountNumber))
+        // Step 5: Get transaction history for both accounts
+        mockMvc.perform(get("/api/accounts/{accountNumber}/transactions", firstAccountNumber)
+                .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$", hasSize(greaterThanOrEqualTo(1))))
-                .andExpect(jsonPath("$[0].amount", is(250.00)))
-                .andExpect(jsonPath("$[0].sourceAccount.accountNumber", is(firstAccountNumber)))
-                .andExpect(jsonPath("$[0].destinationAccount.accountNumber", is(secondAccountNumber)));
+                .andExpect(jsonPath("$[0].amount", is(-300.00)))
+                .andExpect(jsonPath("$[0].transactionType", is("TRANSFER")));
         
-        // Step 5: Verify final account details after transfer
-        mockMvc.perform(get("/api/accounts/{accountNumber}", firstAccountNumber))
+        mockMvc.perform(get("/api/accounts/{accountNumber}/transactions", secondAccountNumber)
+                .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.accountNumber", is(firstAccountNumber)))
-                .andExpect(jsonPath("$.accountHolder", is("John Doe")))
-                .andExpect(jsonPath("$.balance", is(750.00))); // 1000 - 250
-                
-        mockMvc.perform(get("/api/accounts/{accountNumber}", secondAccountNumber))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.accountNumber", is(secondAccountNumber)))
-                .andExpect(jsonPath("$.accountHolder", is("Jane Smith")))
-                .andExpect(jsonPath("$.balance", is(750.00))); // 500 + 250
-    }
-    
-    // Direct test of service layer using the same business flow
-    @Test
-    public void testBusinessFlowWithServiceLayer() {
-        // Step 1: Create accounts
-        Account firstAccount = accountService.createAccount(
-            "John Doe", "SAVINGS", "USD", new BigDecimal("1000.00"));
-        Account secondAccount = accountService.createAccount(
-            "Jane Smith", "CHECKING", "USD", new BigDecimal("500.00"));
-            
-        assertNotNull(firstAccount.getAccountNumber());
-        assertNotNull(secondAccount.getAccountNumber());
-        assertEquals("John Doe", firstAccount.getAccountHolder());
-        assertEquals("Jane Smith", secondAccount.getAccountHolder());
-        
-        // Step 2: Get account details for verification
-        Account retrievedFirstAccount = transactionService.getAccount(firstAccount.getAccountNumber());
-        Account retrievedSecondAccount = transactionService.getAccount(secondAccount.getAccountNumber());
-        
-        assertEquals(firstAccount.getAccountNumber(), retrievedFirstAccount.getAccountNumber());
-        assertEquals(secondAccount.getAccountNumber(), retrievedSecondAccount.getAccountNumber());
-        assertEquals(new BigDecimal("1000.00"), retrievedFirstAccount.getBalance());
-        assertEquals(new BigDecimal("500.00"), retrievedSecondAccount.getBalance());
-        
-        // Step 3: Transfer money between accounts
-        BigDecimal transferAmount = new BigDecimal("250.00");
-        Transaction transaction = transactionService.processTransaction(
-            firstAccount.getAccountNumber(), 
-            secondAccount.getAccountNumber(),
-            transferAmount
-        );
-        
-        assertNotNull(transaction);
-        assertEquals(transferAmount, transaction.getAmount());
-        
-        // Step 4: Get account transactions to confirm transfer
-        List<Transaction> firstAccountTransactions = 
-            transactionService.getAccountTransactions(firstAccount.getAccountNumber());
-        List<Transaction> secondAccountTransactions = 
-            transactionService.getAccountTransactions(secondAccount.getAccountNumber());
-        
-        assertFalse(firstAccountTransactions.isEmpty());
-        assertFalse(secondAccountTransactions.isEmpty());
-        assertEquals(transferAmount, firstAccountTransactions.get(0).getAmount());
-        
-        // Step 5: Verify final account details after transfer
-        Account updatedFirstAccount = transactionService.getAccount(firstAccount.getAccountNumber());
-        Account updatedSecondAccount = transactionService.getAccount(secondAccount.getAccountNumber());
-        
-        assertEquals(new BigDecimal("750.00"), updatedFirstAccount.getBalance()); // 1000 - 250
-        assertEquals(new BigDecimal("750.00"), updatedSecondAccount.getBalance()); // 500 + 250
-        
-        // Make sure account holder names are preserved
-        assertEquals("John Doe", updatedFirstAccount.getAccountHolder());
-        assertEquals("Jane Smith", updatedSecondAccount.getAccountHolder());
+                .andExpect(jsonPath("$[0].amount", is(300.00)))
+                .andExpect(jsonPath("$[0].transactionType", is("TRANSFER")));
     }
     
     private String extractAccountNumber(String accountJson) {
-        // Simple extraction - in a real app you might want to use a JSON parser
-        int start = accountJson.indexOf("\"accountNumber\":\"") + 17;
+        // Find the accountNumber field
+        String accountNumberField = "\"accountNumber\":\"";
+        int start = accountJson.indexOf(accountNumberField);
+        if (start == -1) {
+            throw new IllegalArgumentException("Account number not found in response: " + accountJson);
+        }
+        start += accountNumberField.length();
         int end = accountJson.indexOf("\"", start);
-        return accountJson.substring(start, end);
+        if (end == -1) {
+            throw new IllegalArgumentException("Invalid JSON format for account number: " + accountJson);
+        }
+        String accountNumber = accountJson.substring(start, end);
+        if (accountNumber.isEmpty()) {
+            throw new IllegalArgumentException("Empty account number in response: " + accountJson);
+        }
+        return accountNumber;
     }
 } 

@@ -11,14 +11,20 @@ import java.util.List;
 
 @Mapper
 public interface TransactionRepository {
-    @Select("SELECT t.id, t.amount, t.currency, t.transaction_type as transactionType, " +
-           "t.status, t.description, t.created_at as createdAt, t.updated_at as updatedAt, " +
-           "t.source_account_id as sourceAccountId, t.destination_account_id as destinationAccountId " +
+    @Select("SELECT t.id, t.amount, t.currency, t.transaction_type, " +
+           "t.status, t.description, t.created_at, t.updated_at, " +
+           "t.source_account_id, t.destination_account_id, " +
+           "sa.account_number as source_account_number, " +
+           "sa.account_holder as source_account_holder, " +
+           "da.account_number as destination_account_number, " +
+           "da.account_holder as destination_account_holder " +
            "FROM transactions t " +
            "JOIN accounts sa ON t.source_account_id = sa.id " +
            "JOIN accounts da ON t.destination_account_id = da.id " +
-           "WHERE sa.account_number = #{accountNumber} OR da.account_number = #{accountNumber}")
-    List<Transaction> findBySourceAccountAccountNumberOrDestinationAccountAccountNumber(
+           "WHERE sa.account_number = #{accountNumber} OR da.account_number = #{accountNumber} " +
+           "AND t.status = 'COMPLETED' " +
+           "ORDER BY t.created_at DESC")
+    List<Transaction> findLatestTransactionsByAccountNumber(
         @Param("accountNumber") String accountNumber);
     
     @Insert("INSERT INTO transactions(source_account_id, destination_account_id, amount, currency, transaction_type, status, description) " +

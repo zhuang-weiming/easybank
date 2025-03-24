@@ -27,11 +27,37 @@ public class AccountService {
         account.setVersion(0);
         account.setStatus("ACTIVE");
         
+        // Set timestamps
+        java.time.OffsetDateTime now = java.time.OffsetDateTime.now();
+        account.setCreatedAt(now);
+        account.setUpdatedAt(now);
+        
         accountRepository.save(account);
         return account;
     }
 
     private String generateAccountNumber() {
-        return UUID.randomUUID().toString().replace("-", "").substring(0, 10);
+        String randomPart = UUID.randomUUID().toString().replace("-", "").substring(0, 8);
+        return "ACC-" + randomPart;
+    }
+
+    @Transactional(readOnly = true)
+    public Account getAccount(String accountNumber) {
+        // Normalize account number format if needed
+        String normalizedAccountNumber = normalizeAccountNumber(accountNumber);
+        return accountRepository.findByAccountNumber(normalizedAccountNumber)
+            .orElseThrow(() -> new IllegalArgumentException(
+                String.format("Account not found: %s. Please ensure the account number is in the format ACC-xxxxxxxx", accountNumber)));
+    }
+
+    private String normalizeAccountNumber(String accountNumber) {
+        if (accountNumber == null) {
+            return null;
+        }
+        // If it doesn't start with ACC-, add it
+        if (!accountNumber.startsWith("ACC-")) {
+            return "ACC-" + accountNumber;
+        }
+        return accountNumber;
     }
 }

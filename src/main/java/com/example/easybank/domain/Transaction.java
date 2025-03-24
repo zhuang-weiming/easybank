@@ -3,9 +3,15 @@ package com.example.easybank.domain;
 import javax.persistence.*;
 import java.io.Serializable;
 import java.math.BigDecimal;
+import java.util.HashMap;
+import java.util.Map;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 @Entity
 @Table(name = "transactions")
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class Transaction extends BaseEntity implements Serializable {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -13,16 +19,20 @@ public class Transaction extends BaseEntity implements Serializable {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "source_account_id")
+    @JsonIgnore
     private Account sourceAccount;
     
     @Column(name = "source_account_id", insertable = false, updatable = false)
+    @JsonIgnore
     private Long sourceAccountId;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "destination_account_id")
+    @JsonIgnore
     private Account destinationAccount;
     
     @Column(name = "destination_account_id", insertable = false, updatable = false)
+    @JsonIgnore
     private Long destinationAccountId;
 
     @Column(nullable = false)
@@ -32,7 +42,8 @@ public class Transaction extends BaseEntity implements Serializable {
     private String currency;
 
     @Column(name = "transaction_type", nullable = false)
-    private String transactionType;
+    @Enumerated(EnumType.STRING)
+    private TransactionType transactionType;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -47,7 +58,13 @@ public class Transaction extends BaseEntity implements Serializable {
     private String sourceAccountNumber;
 
     @Transient
+    private String sourceAccountHolder;
+
+    @Transient
     private String destinationAccountNumber;
+
+    @Transient
+    private String destinationAccountHolder;
 
     @Version
     private Integer version;
@@ -94,12 +111,12 @@ public class Transaction extends BaseEntity implements Serializable {
         this.currency = currency == null ? null : currency.trim();
     }
 
-    public String getTransactionType() {
+    public TransactionType getTransactionType() {
         return transactionType;
     }
 
-    public void setTransactionType(String transactionType) {
-        this.transactionType = transactionType == null ? null : transactionType.trim();
+    public void setTransactionType(TransactionType transactionType) {
+        this.transactionType = transactionType;
     }
 
     public TransactionStatus getStatus() {
@@ -150,12 +167,28 @@ public class Transaction extends BaseEntity implements Serializable {
         this.sourceAccountNumber = sourceAccountNumber;
     }
 
+    public String getSourceAccountHolder() {
+        return sourceAccountHolder;
+    }
+
+    public void setSourceAccountHolder(String sourceAccountHolder) {
+        this.sourceAccountHolder = sourceAccountHolder;
+    }
+
     public String getDestinationAccountNumber() {
         return destinationAccountNumber;
     }
 
     public void setDestinationAccountNumber(String destinationAccountNumber) {
         this.destinationAccountNumber = destinationAccountNumber;
+    }
+
+    public String getDestinationAccountHolder() {
+        return destinationAccountHolder;
+    }
+
+    public void setDestinationAccountHolder(String destinationAccountHolder) {
+        this.destinationAccountHolder = destinationAccountHolder;
     }
 
     public Integer getVersion() {
@@ -192,7 +225,9 @@ public class Transaction extends BaseEntity implements Serializable {
             && (this.getUpdatedAt() == null ? other.getUpdatedAt() == null : this.getUpdatedAt().equals(other.getUpdatedAt()))
             && (this.getTransactionId() == null ? other.getTransactionId() == null : this.getTransactionId().equals(other.getTransactionId()))
             && (this.getSourceAccountNumber() == null ? other.getSourceAccountNumber() == null : this.getSourceAccountNumber().equals(other.getSourceAccountNumber()))
+            && (this.getSourceAccountHolder() == null ? other.getSourceAccountHolder() == null : this.getSourceAccountHolder().equals(other.getSourceAccountHolder()))
             && (this.getDestinationAccountNumber() == null ? other.getDestinationAccountNumber() == null : this.getDestinationAccountNumber().equals(other.getDestinationAccountNumber()))
+            && (this.getDestinationAccountHolder() == null ? other.getDestinationAccountHolder() == null : this.getDestinationAccountHolder().equals(other.getDestinationAccountHolder()))
             && (this.getVersion() == null ? other.getVersion() == null : this.getVersion().equals(other.getVersion()));
     }
 
@@ -214,7 +249,9 @@ public class Transaction extends BaseEntity implements Serializable {
         result = prime * result + ((getUpdatedAt() == null) ? 0 : getUpdatedAt().hashCode());
         result = prime * result + ((getTransactionId() == null) ? 0 : getTransactionId().hashCode());
         result = prime * result + ((getSourceAccountNumber() == null) ? 0 : getSourceAccountNumber().hashCode());
+        result = prime * result + ((getSourceAccountHolder() == null) ? 0 : getSourceAccountHolder().hashCode());
         result = prime * result + ((getDestinationAccountNumber() == null) ? 0 : getDestinationAccountNumber().hashCode());
+        result = prime * result + ((getDestinationAccountHolder() == null) ? 0 : getDestinationAccountHolder().hashCode());
         result = prime * result + ((getVersion() == null) ? 0 : getVersion().hashCode());
         return result;
     }
@@ -237,10 +274,34 @@ public class Transaction extends BaseEntity implements Serializable {
         sb.append(", updatedAt=").append(getUpdatedAt());
         sb.append(", transactionId=").append(transactionId);
         sb.append(", sourceAccountNumber=").append(sourceAccountNumber);
+        sb.append(", sourceAccountHolder=").append(sourceAccountHolder);
         sb.append(", destinationAccountNumber=").append(destinationAccountNumber);
+        sb.append(", destinationAccountHolder=").append(destinationAccountHolder);
         sb.append(", version=").append(version);
         sb.append(", serialVersionUID=").append(serialVersionUID);
         sb.append("]");
         return sb.toString();
+    }
+
+    @JsonProperty("sourceAccount")
+    public Map<String, String> getSourceAccountDetails() {
+        if (sourceAccountNumber == null && sourceAccountHolder == null) {
+            return null;
+        }
+        Map<String, String> details = new HashMap<>();
+        details.put("accountNumber", sourceAccountNumber);
+        details.put("accountHolder", sourceAccountHolder);
+        return details;
+    }
+
+    @JsonProperty("destinationAccount")
+    public Map<String, String> getDestinationAccountDetails() {
+        if (destinationAccountNumber == null && destinationAccountHolder == null) {
+            return null;
+        }
+        Map<String, String> details = new HashMap<>();
+        details.put("accountNumber", destinationAccountNumber);
+        details.put("accountHolder", destinationAccountHolder);
+        return details;
     }
 }

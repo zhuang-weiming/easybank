@@ -3,6 +3,8 @@ package com.example.easybank.service;
 import com.example.easybank.domain.Account;
 import com.example.easybank.domain.Transaction;
 import com.example.easybank.domain.TransactionStatus;
+import com.example.easybank.domain.TransactionType;
+import com.example.easybank.dto.TransactionResponse;
 import com.example.easybank.repository.AccountRepository;
 import com.example.easybank.repository.TransactionRepository;
 import lombok.extern.slf4j.Slf4j;
@@ -45,29 +47,25 @@ public class TransactionService {
     )
     @CacheEvict(value = "accounts", allEntries = true)
     public Transaction processTransaction(String sourceAccountNumber, String destinationAccountNumber, BigDecimal amount) {
-        log.info("Processing transaction from {} to {} for amount {}", sourceAccountNumber, destinationAccountNumber, amount);
+        String transactionId = generateTransactionId();
+        log.info("Processing transfer: {} -> {}, amount: {}, id: {}", 
+                sourceAccountNumber, destinationAccountNumber, amount, transactionId);
         
         if (amount.compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("Transaction amount must be positive");
         }
         
-        // Generate a unique transaction ID for tracking
-        String transactionId = generateTransactionId();
-        log.info("Generated transaction ID: {}", transactionId);
-        
-        // Check for rate limiting first - this will throw TooManyRequestsException if the limit is exceeded
         rateLimiterService.checkTransactionRateLimit(sourceAccountNumber);
         
-        // First, we create a transaction record with PENDING status
         Transaction transaction = new Transaction();
         transaction.setTransactionId(transactionId);
         transaction.setAmount(amount);
         transaction.setSourceAccountNumber(sourceAccountNumber);
         transaction.setDestinationAccountNumber(destinationAccountNumber);
-        transaction.setTransactionType("TRANSFER");
+        transaction.setTransactionType(TransactionType.TRANSFER);
         transaction.setStatus(TransactionStatus.PENDING);
-        transaction.setDescription(String.format("Transfer %s %s from %s to %s", 
-            amount.toString(), "USD", sourceAccountNumber, destinationAccountNumber));
+        transaction.setDescription(String.format("Transfer %s USD from %s to %s", 
+            amount.toString(), sourceAccountNumber, destinationAccountNumber));
         
         try {
             // Fetch accounts with pessimistic lock to prevent concurrent modifications
@@ -77,20 +75,15 @@ public class TransactionService {
             Account destinationAccount = accountRepository.findByAccountNumberWithLock(destinationAccountNumber)
                     .orElseThrow(() -> new IllegalArgumentException("Destination account not found: " + destinationAccountNumber));
             
-            // Validation steps
+            // Validation steps - these should throw exceptions before any transaction is saved
             validateAccounts(sourceAccount, destinationAccount, sourceAccountNumber, destinationAccountNumber);
             
-            // Check sufficient funds
+            // Check sufficient funds - this is a business rule validation, should throw before saving
             if (sourceAccount.getBalance().compareTo(amount) < 0) {
-                transaction.setStatus(TransactionStatus.FAILED);
-                transaction.setDescription(transaction.getDescription() + " - Failed: Insufficient funds");
-                transaction.setSourceAccount(sourceAccount);
-                transaction.setDestinationAccount(destinationAccount);
-                transactionRepository.save(transaction);
                 throw new IllegalArgumentException("Insufficient funds in source account");
             }
             
-            // Update transaction status to PROCESSING
+            // Only save the transaction after all validations pass
             transaction.setStatus(TransactionStatus.PROCESSING);
             transaction.setSourceAccount(sourceAccount);
             transaction.setDestinationAccount(destinationAccount);
@@ -107,6 +100,9 @@ public class TransactionService {
             
             // Update transaction to COMPLETED
             transaction.setStatus(TransactionStatus.COMPLETED);
+            // Set account details for response
+            transaction.setSourceAccountHolder(sourceAccount.getAccountHolder());
+            transaction.setDestinationAccountHolder(destinationAccount.getAccountHolder());
             transactionRepository.save(transaction);
             
             log.info("Transaction {} completed successfully", transactionId);
@@ -114,18 +110,20 @@ public class TransactionService {
             
         } catch (OptimisticLockingFailureException e) {
             log.warn("Optimistic locking failure for transaction {}, will retry: {}", transactionId, e.getMessage());
-            transaction.setStatus(TransactionStatus.RETRYING);
-            transactionRepository.save(transaction);
+            // Only save if we've already started processing
+            if (transaction.getId() != null) {
+                transaction.setStatus(TransactionStatus.RETRYING);
+                transactionRepository.save(transaction);
+            }
             throw e; // Will be retried by Spring Retry
+        } catch (IllegalArgumentException e) {
+            // Don't save validation failures
+            log.error("Validation error for transaction {}: {}", transactionId, e.getMessage());
+            throw e;
         } catch (Exception e) {
             log.error("Error processing transaction {}: {}", transactionId, e.getMessage(), e);
-            // Only save the transaction record if it's not already saved
-            if (transaction.getId() == null) {
-                transaction.setStatus(TransactionStatus.FAILED);
-                transaction.setDescription(transaction.getDescription() + " - Failed: " + e.getMessage());
-                transactionRepository.save(transaction);
-            } else {
-                // Update existing transaction to FAILED
+            // Only save if we've already started processing
+            if (transaction.getId() != null) {
                 transaction.setStatus(TransactionStatus.FAILED);
                 transaction.setDescription(transaction.getDescription() + " - Failed: " + e.getMessage());
                 transactionRepository.save(transaction);
@@ -139,33 +137,19 @@ public class TransactionService {
      */
     @Recover
     public Transaction recoverFromFailure(Exception e, String sourceAccountNumber, String destinationAccountNumber, BigDecimal amount) {
-        log.error("All retries exhausted for transaction from {} to {} for amount {}", 
-                 sourceAccountNumber, destinationAccountNumber, amount, e);
+        log.error("Transaction failed after retries: {} -> {}, amount: {}", 
+                 sourceAccountNumber, destinationAccountNumber, amount);
         
-        // Create a failed transaction record for auditing and monitoring
         Transaction failedTransaction = new Transaction();
         failedTransaction.setTransactionId(generateTransactionId());
         failedTransaction.setAmount(amount);
         failedTransaction.setSourceAccountNumber(sourceAccountNumber);
         failedTransaction.setDestinationAccountNumber(destinationAccountNumber);
         failedTransaction.setStatus(TransactionStatus.FAILED);
-        failedTransaction.setTransactionType("TRANSFER");
-        failedTransaction.setDescription("Transfer failed after maximum retries: " + e.getMessage());
+        failedTransaction.setTransactionType(TransactionType.TRANSFER);
+        failedTransaction.setDescription("Transfer failed: " + e.getMessage());
         
-        // Try to save the failed transaction for audit purposes
         try {
-            Account sourceAccount = accountRepository.findByAccountNumber(sourceAccountNumber).orElse(null);
-            Account destAccount = accountRepository.findByAccountNumber(destinationAccountNumber).orElse(null);
-            
-            if (sourceAccount != null) {
-                failedTransaction.setSourceAccount(sourceAccount);
-                failedTransaction.setCurrency(sourceAccount.getCurrency());
-            }
-            
-            if (destAccount != null) {
-                failedTransaction.setDestinationAccount(destAccount);
-            }
-            
             transactionRepository.save(failedTransaction);
         } catch (Exception ex) {
             log.error("Failed to save failed transaction record", ex);
@@ -180,7 +164,15 @@ public class TransactionService {
     
     private void validateAccounts(Account sourceAccount, Account destinationAccount, 
                                 String sourceAccountNumber, String destinationAccountNumber) {
-        // Populate default values for null fields
+        // Validate required fields
+        if (sourceAccount.getAccountHolder() == null || sourceAccount.getAccountType() == null) {
+            throw new IllegalArgumentException("Source account is missing required fields");
+        }
+        if (destinationAccount.getAccountHolder() == null || destinationAccount.getAccountType() == null) {
+            throw new IllegalArgumentException("Destination account is missing required fields");
+        }
+        
+        // Set default values only if they are null
         if (sourceAccount.getAccountNumber() == null) {
             sourceAccount.setAccountNumber(sourceAccountNumber);
         }
@@ -188,57 +180,51 @@ public class TransactionService {
             destinationAccount.setAccountNumber(destinationAccountNumber);
         }
         
-        // Set default values for accountHolder if null
-        if (sourceAccount.getAccountHolder() == null) {
-            sourceAccount.setAccountHolder("Account Holder " + sourceAccountNumber);
-        }
-        if (destinationAccount.getAccountHolder() == null) {
-            destinationAccount.setAccountHolder("Account Holder " + destinationAccountNumber);
-        }
-        
-        // Set default values for accountType if null
-        if (sourceAccount.getAccountType() == null) {
-            sourceAccount.setAccountType("CHECKING");
-        }
-        if (destinationAccount.getAccountType() == null) {
-            destinationAccount.setAccountType("CHECKING");
-        }
-        
-        // Set default status if null
-        if (sourceAccount.getStatus() == null) {
-            sourceAccount.setStatus("ACTIVE");
-        }
-        if (destinationAccount.getStatus() == null) {
-            destinationAccount.setStatus("ACTIVE");
-        }
-
-        // Now validate the accounts after populating defaults
-        if (!"ACTIVE".equals(sourceAccount.getStatus())) {
+        if (sourceAccount.getStatus() == null || !"ACTIVE".equals(sourceAccount.getStatus())) {
             throw new IllegalArgumentException("Source account is not active");
         }
-        if (!"ACTIVE".equals(destinationAccount.getStatus())) {
+        if (destinationAccount.getStatus() == null || !"ACTIVE".equals(destinationAccount.getStatus())) {
             throw new IllegalArgumentException("Destination account is not active");
         }
     }
     
-    public List<Transaction> getAccountTransactions(String accountNumber) {
-        List<Transaction> transactions = transactionRepository.findBySourceAccountAccountNumberOrDestinationAccountAccountNumber(accountNumber);
+    public List<TransactionResponse> getAccountTransactions(String accountNumber) {
+        // Get transactions with the latest status for each transaction ID
+        List<Transaction> transactions = transactionRepository.findLatestTransactionsByAccountNumber(accountNumber);
         
-        // Populate the account information for each transaction
+        // Load associated accounts for each transaction
         for (Transaction transaction : transactions) {
-            if (transaction.getSourceAccount() == null && transaction.getSourceAccountId() != null) {
-                // Fetch the source account using the repository
+            if (transaction.getSourceAccountId() != null) {
                 accountRepository.findById(transaction.getSourceAccountId())
-                        .ifPresent(transaction::setSourceAccount);
+                    .ifPresent(account -> {
+                        transaction.setSourceAccount(account);
+                        transaction.setSourceAccountNumber(account.getAccountNumber());
+                        transaction.setSourceAccountHolder(account.getAccountHolder());
+                        // If this account is the source and amount is positive, negate it
+                        if (accountNumber.equals(account.getAccountNumber()) && transaction.getAmount().compareTo(BigDecimal.ZERO) > 0) {
+                            transaction.setAmount(transaction.getAmount().negate());
+                        }
+                    });
+            }
+            if (transaction.getDestinationAccountId() != null) {
+                accountRepository.findById(transaction.getDestinationAccountId())
+                    .ifPresent(account -> {
+                        transaction.setDestinationAccount(account);
+                        transaction.setDestinationAccountNumber(account.getAccountNumber());
+                        transaction.setDestinationAccountHolder(account.getAccountHolder());
+                    });
             }
             
-            if (transaction.getDestinationAccount() == null && transaction.getDestinationAccountId() != null) {
-                // Fetch the destination account using the repository
-                accountRepository.findById(transaction.getDestinationAccountId())
-                        .ifPresent(transaction::setDestinationAccount);
+            // Ensure transactionId is set if null
+            if (transaction.getTransactionId() == null) {
+                transaction.setTransactionId(generateTransactionId());
             }
         }
-        
-        return transactions;
+
+        // Filter out intermediate states and convert to DTOs
+        return transactions.stream()
+            .filter(t -> t.getStatus() == TransactionStatus.COMPLETED || t.getStatus() == TransactionStatus.FAILED)
+            .map(TransactionResponse::fromTransaction)
+            .toList();
     }
 }

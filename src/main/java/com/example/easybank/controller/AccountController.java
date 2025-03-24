@@ -2,6 +2,7 @@ package com.example.easybank.controller;
 
 import com.example.easybank.domain.Account;
 import com.example.easybank.domain.Transaction;
+import com.example.easybank.dto.TransactionResponse;
 import com.example.easybank.service.AccountService;
 import com.example.easybank.service.TransactionService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -30,7 +31,21 @@ public class AccountController {
     public ResponseEntity<Account> getAccount(
             @Parameter(description = "Account number", required = true)
             @PathVariable String accountNumber) {
-        return ResponseEntity.ok(transactionService.getAccount(accountNumber));
+        return ResponseEntity.ok(accountService.getAccount(accountNumber));
+    }
+    
+    @Operation(summary = "Create new account", description = "Creates a new bank account")
+    @PostMapping
+    public ResponseEntity<Account> createAccount(
+            @Parameter(description = "Account holder name", required = true)
+            @RequestParam String accountHolder,
+            @Parameter(description = "Account type (SAVINGS/CHECKING)", required = true)
+            @RequestParam String accountType,
+            @Parameter(description = "Currency code (e.g., USD)", required = true)
+            @RequestParam String currency,
+            @Parameter(description = "Initial balance", required = true)
+            @RequestParam BigDecimal initialBalance) {
+        return ResponseEntity.ok(accountService.createAccount(accountHolder, accountType, currency, initialBalance));
     }
     
     @Operation(summary = "Transfer money", description = "Transfer money between two accounts")
@@ -50,25 +65,11 @@ public class AccountController {
         return ResponseEntity.ok(transaction);
     }
     
-    @Operation(summary = "Get account transactions", description = "Retrieves all transactions for a specific account")
+    @Operation(summary = "Get account transactions", description = "Retrieves all transactions for an account")
     @GetMapping("/{accountNumber}/transactions")
-    public ResponseEntity<List<Transaction>> getAccountTransactions(
+    public ResponseEntity<List<TransactionResponse>> getAccountTransactions(
             @Parameter(description = "Account number", required = true)
             @PathVariable String accountNumber) {
         return ResponseEntity.ok(transactionService.getAccountTransactions(accountNumber));
-    }
-
-    @Operation(summary = "Create new account", description = "Creates a new bank account with the specified details")
-    @PostMapping
-    public ResponseEntity<Account> createAccount(
-            @Parameter(description = "Account holder name", required = true)
-            @RequestParam String accountHolder,
-            @Parameter(description = "Account type (e.g. SAVINGS, CHECKING)", required = true)
-            @RequestParam String accountType,
-            @Parameter(description = "Currency code (e.g. USD)", required = false)
-            @RequestParam(required = false, defaultValue = "USD") String currency,
-            @Parameter(description = "Initial balance", required = false, example = "0.00")
-            @RequestParam(required = false) BigDecimal initialBalance) {
-        return ResponseEntity.ok(accountService.createAccount(accountHolder, accountType, currency, initialBalance));
     }
 }

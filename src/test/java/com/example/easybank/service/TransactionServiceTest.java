@@ -3,6 +3,8 @@ package com.example.easybank.service;
 import com.example.easybank.domain.Account;
 import com.example.easybank.domain.Transaction;
 import com.example.easybank.domain.TransactionStatus;
+import com.example.easybank.domain.TransactionType;
+import com.example.easybank.dto.TransactionResponse;
 import com.example.easybank.repository.AccountRepository;
 import com.example.easybank.repository.TransactionRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -47,6 +49,8 @@ class TransactionServiceTest {
         Account sourceAccount = new Account();
         sourceAccount.setId(1L);
         sourceAccount.setAccountNumber("123");
+        sourceAccount.setAccountHolder("John Doe");
+        sourceAccount.setAccountType("SAVINGS");
         sourceAccount.setBalance(new BigDecimal("1000"));
         sourceAccount.setCurrency("USD");
         sourceAccount.setStatus("ACTIVE");
@@ -54,12 +58,12 @@ class TransactionServiceTest {
         Account destinationAccount = new Account();
         destinationAccount.setId(2L);
         destinationAccount.setAccountNumber("456");
+        destinationAccount.setAccountHolder("Jane Smith");
+        destinationAccount.setAccountType("CHECKING");
         destinationAccount.setBalance(new BigDecimal("500"));
         destinationAccount.setCurrency("USD");
         destinationAccount.setStatus("ACTIVE");
 
-        when(accountRepository.findByAccountNumber("123")).thenReturn(Optional.of(sourceAccount));
-        when(accountRepository.findByAccountNumber("456")).thenReturn(Optional.of(destinationAccount));
         when(accountRepository.findByAccountNumberWithLock("123")).thenReturn(Optional.of(sourceAccount));
         when(accountRepository.findByAccountNumberWithLock("456")).thenReturn(Optional.of(destinationAccount));
         when(accountRepository.update(any(Account.class))).thenReturn(1);
@@ -182,9 +186,9 @@ class TransactionServiceTest {
         transaction.setId(1L);
         transaction.setSourceAccountId(10L);
         transaction.setDestinationAccountId(20L);
-        transaction.setAmount(new BigDecimal("100"));
+        transaction.setAmount(new BigDecimal("-100"));
         transaction.setCurrency("USD");
-        transaction.setTransactionType("TRANSFER");
+        transaction.setTransactionType(TransactionType.TRANSFER);
         transaction.setStatus(TransactionStatus.COMPLETED);
         
         // Create the accounts that should be loaded
@@ -199,41 +203,35 @@ class TransactionServiceTest {
         destinationAccount.setAccountHolder("Jane Smith");
         
         // Mock repository responses
-        when(transactionRepository.findBySourceAccountAccountNumberOrDestinationAccountAccountNumber(accountNumber))
+        when(transactionRepository.findLatestTransactionsByAccountNumber(accountNumber))
             .thenReturn(List.of(transaction));
         when(accountRepository.findById(10L)).thenReturn(Optional.of(sourceAccount));
         when(accountRepository.findById(20L)).thenReturn(Optional.of(destinationAccount));
         
         // Act
-        List<Transaction> result = transactionService.getAccountTransactions(accountNumber);
+        List<TransactionResponse> transactions = transactionService.getAccountTransactions(accountNumber);
         
         // Assert
-        assertEquals(1, result.size());
-        Transaction resultTransaction = result.get(0);
+        assertNotNull(transactions);
+        assertEquals(1, transactions.size());
         
-        // Verify accounts were loaded correctly
-        assertNotNull(resultTransaction.getSourceAccount());
-        assertEquals(sourceAccount.getId(), resultTransaction.getSourceAccount().getId());
-        assertEquals(sourceAccount.getAccountHolder(), resultTransaction.getSourceAccount().getAccountHolder());
-        
-        assertNotNull(resultTransaction.getDestinationAccount());
-        assertEquals(destinationAccount.getId(), resultTransaction.getDestinationAccount().getId());
-        assertEquals(destinationAccount.getAccountHolder(), resultTransaction.getDestinationAccount().getAccountHolder());
-        
-        // Verify repository methods were called
-        verify(transactionRepository).findBySourceAccountAccountNumberOrDestinationAccountAccountNumber(accountNumber);
-        verify(accountRepository).findById(10L);
-        verify(accountRepository).findById(20L);
+        TransactionResponse response = transactions.get(0);
+        assertEquals("123", response.getSourceAccountNumber());
+        assertEquals("456", response.getDestinationAccountNumber());
+        assertEquals("John Doe", response.getSourceAccountHolder());
+        assertEquals("Jane Smith", response.getDestinationAccountHolder());
+        assertEquals(new BigDecimal("-100"), response.getAmount());
+        assertEquals("USD", response.getCurrency());
+        assertEquals(TransactionType.TRANSFER, response.getTransactionType());
+        assertEquals(TransactionStatus.COMPLETED, response.getStatus());
     }
 
     @Test
-    void processTransaction_PopulatesNullFields() {
+    void processTransaction_RequiresAllFields() {
         // Arrange
         Account sourceAccount = new Account();
         sourceAccount.setId(1L);
         sourceAccount.setAccountNumber("123");
-        sourceAccount.setAccountHolder(null); // Null account holder
-        sourceAccount.setAccountType(null); // Null account type
         sourceAccount.setBalance(new BigDecimal("1000"));
         sourceAccount.setCurrency("USD");
         sourceAccount.setStatus("ACTIVE");
@@ -241,29 +239,22 @@ class TransactionServiceTest {
         Account destinationAccount = new Account();
         destinationAccount.setId(2L);
         destinationAccount.setAccountNumber("456");
-        destinationAccount.setAccountHolder(null); // Null account holder
-        destinationAccount.setAccountType(null); // Null account type
         destinationAccount.setBalance(new BigDecimal("500"));
         destinationAccount.setCurrency("USD");
         destinationAccount.setStatus("ACTIVE");
 
         when(accountRepository.findByAccountNumberWithLock("123")).thenReturn(Optional.of(sourceAccount));
         when(accountRepository.findByAccountNumberWithLock("456")).thenReturn(Optional.of(destinationAccount));
-        when(accountRepository.update(any(Account.class))).thenReturn(1);
-        when(transactionRepository.save(any(Transaction.class))).thenReturn(1);
 
-        // Act
-        transactionService.processTransaction("123", "456", new BigDecimal("100"));
+        // Act & Assert
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
+            transactionService.processTransaction("123", "456", new BigDecimal("100"));
+        });
+        assertEquals("Source account is missing required fields", exception.getMessage());
         
-        // Assert
-        assertEquals("Account Holder 123", sourceAccount.getAccountHolder());
-        assertEquals("Account Holder 456", destinationAccount.getAccountHolder());
-        assertEquals("CHECKING", sourceAccount.getAccountType());
-        assertEquals("CHECKING", destinationAccount.getAccountType());
-        assertEquals(new BigDecimal("900"), sourceAccount.getBalance());
-        assertEquals(new BigDecimal("600"), destinationAccount.getBalance());
-        verify(accountRepository, times(1)).update(sourceAccount);
-        verify(accountRepository, times(1)).update(destinationAccount);
+        // Verify no updates were made
+        verify(accountRepository, never()).update(any());
+        verify(transactionRepository, never()).save(any());
     }
 
     @Test
@@ -276,32 +267,33 @@ class TransactionServiceTest {
         transaction.setId(1L);
         transaction.setSourceAccountId(10L);
         transaction.setDestinationAccountId(20L);
-        transaction.setAmount(new BigDecimal("100"));
+        transaction.setAmount(new BigDecimal("-100"));
         transaction.setCurrency("USD");
-        transaction.setTransactionType("TRANSFER");
+        transaction.setTransactionType(TransactionType.TRANSFER);
         transaction.setStatus(TransactionStatus.COMPLETED);
         
         // Mock repository responses
-        when(transactionRepository.findBySourceAccountAccountNumberOrDestinationAccountAccountNumber(accountNumber))
+        when(transactionRepository.findLatestTransactionsByAccountNumber(accountNumber))
             .thenReturn(List.of(transaction));
-        when(accountRepository.findById(10L)).thenReturn(Optional.empty()); // Source account not found
-        when(accountRepository.findById(20L)).thenReturn(Optional.empty()); // Destination account not found
+        when(accountRepository.findById(10L)).thenReturn(Optional.empty());
+        when(accountRepository.findById(20L)).thenReturn(Optional.empty());
         
         // Act
-        List<Transaction> result = transactionService.getAccountTransactions(accountNumber);
+        List<TransactionResponse> transactions = transactionService.getAccountTransactions(accountNumber);
         
         // Assert
-        assertEquals(1, result.size());
-        Transaction resultTransaction = result.get(0);
+        assertNotNull(transactions);
+        assertEquals(1, transactions.size());
         
-        // Verify accounts were not loaded (since they don't exist)
-        assertNull(resultTransaction.getSourceAccount());
-        assertNull(resultTransaction.getDestinationAccount());
-        
-        // Verify repository methods were called
-        verify(transactionRepository).findBySourceAccountAccountNumberOrDestinationAccountAccountNumber(accountNumber);
-        verify(accountRepository).findById(10L);
-        verify(accountRepository).findById(20L);
+        TransactionResponse response = transactions.get(0);
+        assertNull(response.getSourceAccountNumber());
+        assertNull(response.getDestinationAccountNumber());
+        assertNull(response.getSourceAccountHolder());
+        assertNull(response.getDestinationAccountHolder());
+        assertEquals(new BigDecimal("-100"), response.getAmount());
+        assertEquals("USD", response.getCurrency());
+        assertEquals(TransactionType.TRANSFER, response.getTransactionType());
+        assertEquals(TransactionStatus.COMPLETED, response.getStatus());
     }
 
     @Test
@@ -310,17 +302,17 @@ class TransactionServiceTest {
         String accountNumber = "123";
         
         // Mock repository responses
-        when(transactionRepository.findBySourceAccountAccountNumberOrDestinationAccountAccountNumber(accountNumber))
+        when(transactionRepository.findLatestTransactionsByAccountNumber(accountNumber))
             .thenReturn(List.of());
         
         // Act
-        List<Transaction> result = transactionService.getAccountTransactions(accountNumber);
+        List<TransactionResponse> result = transactionService.getAccountTransactions(accountNumber);
         
         // Assert
         assertTrue(result.isEmpty());
         
         // Verify repository method was called
-        verify(transactionRepository).findBySourceAccountAccountNumberOrDestinationAccountAccountNumber(accountNumber);
+        verify(transactionRepository).findLatestTransactionsByAccountNumber(accountNumber);
         // Verify no account lookups were performed
         verify(accountRepository, never()).findById(any());
     }

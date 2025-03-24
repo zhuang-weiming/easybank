@@ -1,4 +1,4 @@
-CREATE TABLE IF NOT EXISTS account (
+CREATE TABLE IF NOT EXISTS accounts (
     id SERIAL PRIMARY KEY,
     account_number VARCHAR(255) NOT NULL UNIQUE,
     account_holder VARCHAR(255) NOT NULL,
@@ -10,10 +10,10 @@ CREATE TABLE IF NOT EXISTS account (
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE IF NOT EXISTS transaction (
+CREATE TABLE IF NOT EXISTS transactions (
     id SERIAL PRIMARY KEY,
-    source_account_id BIGINT REFERENCES account(id),
-    destination_account_id BIGINT REFERENCES account(id),
+    source_account_id BIGINT REFERENCES accounts(id),
+    destination_account_id BIGINT REFERENCES accounts(id),
     amount DECIMAL(19, 2) NOT NULL,
     currency VARCHAR(3) NOT NULL,
     transaction_type VARCHAR(20) NOT NULL,
