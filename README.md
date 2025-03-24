@@ -1,6 +1,6 @@
 # Easy Bank - Real-Time Balance Calculation System
 
-A high-performance banking system built with Spring Boot and deployed on AWS EKS, optimized for t3.micro instance constraints.
+A homework on banking system built with Spring Boot and deployed on AWS EKS, optimized for t3.micro instance constraints.
 
 ## Quick Links
 - [Architecture](#architecture)
