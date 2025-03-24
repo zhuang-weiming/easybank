@@ -189,24 +189,31 @@ kubectl logs <pod-name>
 
 #### API Response Tests
 ```bash
+
+# swagger docs
+http://a229078c60e7744b5833c1c12dcbf911-1653889544.us-west-2.elb.amazonaws.com/swagger-ui/index.html
+
 # Health Check
-curl -I http://[load-balancer-url]/actuator/health
+curl -I http://a229078c60e7744b5833c1c12dcbf911-1653889544.us-west-2.elb.amazonaws.com/actuator/health
 HTTP/1.1 200 
 Content-Type: application/vnd.spring-boot.actuator.v3+json
+Transfer-Encoding: chunked
+Date: Mon, 24 Mar 2025 09:53:43 GMT
 
 # Account Creation Test
-curl -X POST http://[load-balancer-url]/api/accounts \
+curl -X POST http://a229078c60e7744b5833c1c12dcbf911-1653889544.us-west-2.elb.amazonaws.com/api/accounts \
      -H 'Content-Type: application/x-www-form-urlencoded' \
      -d 'accountHolder=John Doe&accountType=SAVINGS&currency=USD&initialBalance=1000.00'
 Response: Account created successfully with number ACC-f6ecf037
 
 # Account Query Test
-curl -X GET http://[load-balancer-url]/api/accounts/ACC-f6ecf037
-Response: Account details retrieved successfully
+curl -X GET http://a229078c60e7744b5833c1c12dcbf911-1653889544.us-west-2.elb.amazonaws.com/api/accounts/ACC-f6ecf037
+{"createdAt":"2025-03-24T07:56:24.522271Z","updatedAt":"2025-03-24T08:00:55.213158Z","id":8,"accountNumber":"ACC-f6ecf037","accountHolder":"John Doe","balance":941.00,"currency":"USD","accountType":"SAVINGS","status":"ACTIVE","version":1}%   
 
 # Money Transfer Test
-curl -X POST 'http://[load-balancer-url]/api/accounts/ACC-f6ecf037/transfer?destinationAccountNumber=ACC-323a5105&amount=59'
-Response: Transfer completed successfully with transaction ID 5ed3050a-0515-4b2b-a805-c65d7c73733e
+curl -X POST 'http://a229078c60e7744b5833c1c12dcbf911-1653889544.us-west-2.elb.amazonaws.com/api/accounts/ACC-f6ecf037/transfer?destinationAccountNumber=ACC-323a5105&amount=59'
+{"amount":59,"currency":"USD","transactionType":"TRANSFER","status":"COMPLETED","description":"Transfer 59 USD from ACC-f6ecf037 to ACC-323a5105","transactionId":"744d6645-a8c9-4310-a56e-0838e8e12517","sourceAccountNumber":"ACC-f6ecf037","sourceAccountHolder":"John Doe","destinationAccountNumber":"ACC-323a5105","destinationAccountHolder":"Zhuangweiming","destinationAccount":{"accountHolder":"Zhuangweiming","accountNumber":"ACC-323a5105"},"sourceAccount":{"accountHolder":"John Doe","accountNumber":"ACC-f6ecf037"}}% 
+
 ```
 
 #### Load Test Results (JMeter)
