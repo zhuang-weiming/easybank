@@ -113,8 +113,8 @@ cd easy-bank
 
 # Set environment variables
 export SPRING_DATASOURCE_URL=jdbc:postgresql://localhost:5432/easybank
-export SPRING_DATASOURCE_USERNAME=postgres
-export SPRING_DATASOURCE_PASSWORD=postgres
+export SPRING_DATASOURCE_USERNAME=yourusername
+export SPRING_DATASOURCE_PASSWORD=yourpassword
 export SPRING_REDIS_HOST=localhost
 export SPRING_REDIS_PORT=6379
 
